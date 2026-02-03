@@ -1,0 +1,48 @@
+﻿name: Windows Build Debug
+
+on: workflow_dispatch
+
+jobs:
+  debug-build:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.16.0'
+    
+    - name: Install VS Build Tools
+      run: |
+        choco install visualstudio2022buildtools -y
+        choco install windows-sdk-10.0 -y
+        choco install cmake -y
+    
+    - name: Flutter doctor
+      run: flutter doctor -v
+    
+    - name: Get packages
+      run: flutter pub get
+    
+    - name: Try build
+      run: flutter build windows --release 2>&1 || echo "Build failed"
+    
+    - name: List files
+      run: |
+        echo "=== Current directory ==="
+        dir
+        echo "=== Build directory ==="
+        dir build 2>nul || echo "No build folder"
+        dir build/windows 2>nul || echo "No windows folder"
+        dir build/windows/runner 2>nul || echo "No runner folder"
+        dir build/windows/runner/Release 2>nul || echo "No Release folder"
+    
+    - name: Upload logs
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: |
+          flutter.log
+          build.log
