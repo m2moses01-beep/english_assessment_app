@@ -1,0 +1,38 @@
+﻿name: Test Windows Build
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  test-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: stable
+        
+    - name: Install dependencies
+      run: flutter pub get
+      
+    - name: Test Windows build
+      run: |
+        echo "=== Testing Windows build ==="
+        flutter config --enable-windows
+        flutter doctor
+        flutter build windows --release --verbose
+        echo "=== Build output ==="
+        dir build\windows -Recurse -Filter *.exe 2>&1 || echo "No .exe found"
+      
+    - name: Upload logs for debugging
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-test-logs
+        path: |
+          flutter_logs.txt
+        retention-days: 1
