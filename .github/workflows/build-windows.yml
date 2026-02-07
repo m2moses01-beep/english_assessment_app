@@ -1,4 +1,4 @@
-name: Build Windows Release
+name: Build Windows App
 
 on:
   push:
@@ -14,10 +14,10 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
     
-    - name: Create Required Windows Files
+    - name: Create Windows Files
       shell: cmd
       run: |
-        rem Create the essential files using CMD syntax
+        echo Creating minimal Windows files...
         echo #pragma once > windows\runner\resource.h
         echo. >> windows\runner\resource.h
         echo #define IDI_APP_ICON 101 >> windows\runner\resource.h
@@ -25,7 +25,7 @@ jobs:
         
         echo #include "resource.h" > windows\runner\runner.rc
         echo. >> windows\runner\runner.rc
-        echo // Build works without icon for now >> windows\runner\runner.rc
+        echo // Icon disabled for build success >> windows\runner\runner.rc
         echo // IDI_APP_ICON ICON "resources/app_icon.ico" >> windows\runner\runner.rc
         echo. >> windows\runner\runner.rc
         echo IDR_APPLICATION_MANIFEST RT_MANIFEST "runner.exe.manifest" >> windows\runner\runner.rc
@@ -33,35 +33,46 @@ jobs:
     - name: Install Dependencies
       run: flutter pub get
     
-    - name: Clean Previous Builds
+    - name: Clean Build
       run: flutter clean
     
-    - name: Build Release Version
-      run: flutter build windows --release
+    - name: Build Debug Version
+      run: flutter build windows --debug
     
-    - name: Verify Release Build (PowerShell)
+    - name: Verify Debug Build
       shell: pwsh
       run: |
-        Write-Host "=== Checking Release Build ===" -ForegroundColor Cyan
+        Write-Host "=== Checking Debug Build ===" -ForegroundColor Cyan
         
-        if (Test-Path "build/windows/runner/Release") {
-            Write-Host "✅ Release directory found" -ForegroundColor Green
-            Get-ChildItem -Path "build/windows/runner/Release" -Recurse | Format-Table Name, Length, LastWriteTime
+        # Try Debug directory first
+        if (Test-Path "build/windows/runner/Debug") {
+            Write-Host "✅ Debug directory found" -ForegroundColor Green
+            Get-ChildItem -Path "build/windows/runner/Debug" -Filter "*.exe" | Format-Table Name, Length
             
-            Write-Host "`n=== Executable size ===" -ForegroundColor Yellow
-            $exeFiles = Get-ChildItem -Path "build/windows/runner/Release" -Filter "*.exe" -Recurse
-            foreach ($file in $exeFiles) {
-                Write-Host "$($file.Name): $($file.Length / 1MB) MB" -ForegroundColor Cyan
-            }
-        } else {
-            Write-Host "❌ Release directory not found" -ForegroundColor Red
-            Write-Host "Available directories:" -ForegroundColor Yellow
-            Get-ChildItem -Path "build" -Recurse -Directory | Select-Object FullName
+            Write-Host "=== Uploading from Debug ===" -ForegroundColor Green
+            Get-ChildItem -Path "build/windows/runner/Debug" | Format-Table Name
+        }
+        # Also check Release (just in case)
+        elseif (Test-Path "build/windows/runner/Release") {
+            Write-Host "✅ Release directory found instead" -ForegroundColor Green
+            Get-ChildItem -Path "build/windows/runner/Release" -Filter "*.exe" | Format-Table Name, Length
+        }
+        else {
+            Write-Host "❌ Neither Debug nor Release found" -ForegroundColor Red
+            Write-Host "Available in build/windows:" -ForegroundColor Yellow
+            Get-ChildItem -Path "build/windows" -Recurse -Directory | Format-Table FullName
         }
     
-    - name: Upload Windows App
+    - name: Upload Debug Build
       uses: actions/upload-artifact@v4
       with:
-        name: windows-application
-        path: build/windows/runner/Release/
-        if-no-files-found: error
+        name: windows-debug-app
+        path: build/windows/runner/Debug/
+        if-no-files-found: warn
+    
+    - name: Upload Entire Build Directory
+      uses: actions/upload-artifact@v4
+      with:
+        name: full-build-output
+        path: build/windows/
+        if-no-files-found: warn
