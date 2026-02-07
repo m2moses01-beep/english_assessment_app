@@ -19,28 +19,67 @@ jobs:
         channel: 'stable'
         cache: true
     
-    - name: Create Required Windows Files
+    - name: Fix Windows Files
+      shell: pwsh
       run: |
-        # Create minimal required files using simple commands
-        echo "#pragma once" > windows/runner/resource.h
-        echo "" >> windows/runner/resource.h
-        echo "#define IDI_APP_ICON 101" >> windows/runner/resource.h
-        echo "#define IDR_APPLICATION_MANIFEST 102" >> windows/runner/resource.h
+        Write-Host "=== Checking and fixing Windows files ===" -ForegroundColor Cyan
         
-        # Create runner.rc
-        echo "#include \"resource.h\"" > windows/runner/runner.rc
-        echo "" >> windows/runner/runner.rc
-        echo "IDI_APP_ICON ICON \"resources/app_icon.ico\"" >> windows/runner/runner.rc
-        echo "" >> windows/runner/runner.rc
-        echo "IDR_APPLICATION_MANIFEST RT_MANIFEST \"runner.exe.manifest\"" >> windows/runner/runner.rc
+        # 1. Check current files first
+        Write-Host "Current directory structure:" -ForegroundColor Yellow
+        Get-ChildItem -Path "windows" -Recurse -Depth 2 | Select-Object Name, FullName
         
-        # Create resources directory and a tiny icon
-        mkdir -p windows/runner/resources
+        # 2. Create resource.h (overwrite if exists)
+        $resourceContent = @'
+#pragma once
+
+#define IDI_APP_ICON                    101
+#define IDR_APPLICATION_MANIFEST        102
+'@
+        Set-Content -Path "windows/runner/resource.h" -Value $resourceContent -Encoding ASCII
+        Write-Host "✅ Updated resource.h" -ForegroundColor Green
         
-        # Create a TINY valid icon (just 70 bytes instead of thousands!)
-        echo -ne '\x00\x00\x01\x00\x01\x00\x01\x01\x00\x00\x01\x00\x08\x00\x28\x00\x00\x00\x16\x00\x00\x00\x28\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x01\x00\x08\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xFF\xFF\xFF\x00\x00\x00\x00\x00' > windows/runner/resources/app_icon.ico
+        # 3. Create runner.rc (overwrite if exists)
+        $runnerRcContent = @'
+#include "resource.h"
+
+IDI_APP_ICON ICON "resources/app_icon.ico"
+
+IDR_APPLICATION_MANIFEST RT_MANIFEST "runner.exe.manifest"
+'@
+        Set-Content -Path "windows/runner/runner.rc" -Value $runnerRcContent -Encoding ASCII
+        Write-Host "✅ Updated runner.rc" -ForegroundColor Green
         
-        echo "✅ Windows files created successfully"
+        # 4. Create resources directory if it doesn't exist (no error if exists)
+        $resourcesPath = "windows/runner/resources"
+        if (!(Test-Path $resourcesPath)) {
+            New-Item -ItemType Directory -Path $resourcesPath -Force | Out-Null
+            Write-Host "✅ Created resources directory" -ForegroundColor Green
+        } else {
+            Write-Host "✓ Resources directory already exists" -ForegroundColor Yellow
+        }
+        
+        # 5. Create icon if missing (don't overwrite if exists)
+        $iconPath = "$resourcesPath/app_icon.ico"
+        if (!(Test-Path $iconPath)) {
+            # Create minimal valid icon (70 bytes)
+            $iconBytes = [byte[]]@(
+                0x00,0x00,0x01,0x00,0x01,0x00,0x01,0x01,0x00,0x00,0x01,0x00,0x08,0x00,0x28,0x00,
+                0x00,0x00,0x16,0x00,0x00,0x00,0x28,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x02,0x00,
+                0x00,0x00,0x01,0x00,0x08,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,
+                0xFF,0x00,0x00,0x00,0x00,0x00
+            )
+            [System.IO.File]::WriteAllBytes($iconPath, $iconBytes)
+            Write-Host "✅ Created app_icon.ico" -ForegroundColor Green
+        } else {
+            Write-Host "✓ app_icon.ico already exists" -ForegroundColor Yellow
+        }
+        
+        Write-Host "=== Verification ===" -ForegroundColor Cyan
+        Write-Host "Files created/verified:" -ForegroundColor Green
+        Write-Host "  • windows/runner/resource.h"
+        Write-Host "  • windows/runner/runner.rc"
+        Write-Host "  • windows/runner/resources/app_icon.ico"
     
     - name: Install Dependencies
       run: flutter pub get
