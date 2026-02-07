@@ -1,78 +1,92 @@
-name: Build Windows App
+name: Complete Windows Build
 
 on:
   push:
-    branches: [main]
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
     
+    strategy:
+      matrix:
+        build-type: [debug, release]
+        
     steps:
     - uses: actions/checkout@v4
     
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
-    
-    - name: Create Windows Files
-      shell: cmd
-      run: |
-        echo Creating minimal Windows files...
-        echo #pragma once > windows\runner\resource.h
-        echo. >> windows\runner\resource.h
-        echo #define IDI_APP_ICON 101 >> windows\runner\resource.h
-        echo #define IDR_APPLICATION_MANIFEST 102 >> windows\runner\resource.h
+      with:
+        flutter-version: '3.22.0'
+        channel: 'stable'
+        cache: true
         
-        echo #include "resource.h" > windows\runner\runner.rc
-        echo. >> windows\runner\runner.rc
-        echo // Icon disabled for build success >> windows\runner\runner.rc
-        echo // IDI_APP_ICON ICON "resources/app_icon.ico" >> windows\runner\runner.rc
-        echo. >> windows\runner\runner.rc
-        echo IDR_APPLICATION_MANIFEST RT_MANIFEST "runner.exe.manifest" >> windows\runner\runner.rc
-    
     - name: Install Dependencies
-      run: flutter pub get
-    
-    - name: Clean Build
-      run: flutter clean
-    
-    - name: Build Debug Version
-      run: flutter build windows --debug
-    
-    - name: Verify Debug Build
+      run: |
+        flutter pub get
+        flutter config --enable-windows-desktop
+        
+    - name: Build Windows
+      run: flutter build windows --${{ matrix.build-type }}
+      
+    - name: Find and Prepare Artifacts
       shell: pwsh
       run: |
-        Write-Host "=== Checking Debug Build ===" -ForegroundColor Cyan
+        # Create artifacts directory
+        New-Item -ItemType Directory -Force -Path "artifacts"
         
-        # Try Debug directory first
-        if (Test-Path "build/windows/runner/Debug") {
-            Write-Host "✅ Debug directory found" -ForegroundColor Green
-            Get-ChildItem -Path "build/windows/runner/Debug" -Filter "*.exe" | Format-Table Name, Length
-            
-            Write-Host "=== Uploading from Debug ===" -ForegroundColor Green
-            Get-ChildItem -Path "build/windows/runner/Debug" | Format-Table Name
+        # Try to find the executable in multiple locations
+        $possiblePaths = @(
+            "full-build-output\x64\runner\${{ matrix.build-type }}\english_assessment_app.exe",
+            "build\windows\runner\${{ matrix.build-type }}\english_assessment_app.exe",
+            "full-build-output\runner\${{ matrix.build-type }}\english_assessment_app.exe"
+        )
+        
+        $found = $false
+        foreach ($path in $possiblePaths) {
+            if (Test-Path $path) {
+                Write-Host "Found executable at: $path"
+                # Copy to consistent location
+                Copy-Item -Path $path -Destination "artifacts\english_assessment_app.exe" -Force
+                $found = $true
+                break
+            }
         }
-        # Also check Release (just in case)
-        elseif (Test-Path "build/windows/runner/Release") {
-            Write-Host "✅ Release directory found instead" -ForegroundColor Green
-            Get-ChildItem -Path "build/windows/runner/Release" -Filter "*.exe" | Format-Table Name, Length
+        
+        if (-not $found) {
+            Write-Host "Executable not found in standard locations. Searching..."
+            Get-ChildItem -Path . -Filter "english_assessment_app.exe" -Recurse -File | ForEach-Object {
+                Write-Host "Found at: $($_.FullName)"
+                Copy-Item -Path $_.FullName -Destination "artifacts\english_assessment_app.exe" -Force
+            }
         }
-        else {
-            Write-Host "❌ Neither Debug nor Release found" -ForegroundColor Red
-            Write-Host "Available in build/windows:" -ForegroundColor Yellow
-            Get-ChildItem -Path "build/windows" -Recurse -Directory | Format-Table FullName
+        
+        # Also copy all DLLs and data files if they exist
+        $dllPath = Split-Path -Path $path -Parent
+        if (Test-Path $dllPath) {
+            Get-ChildItem -Path $dllPath -Include "*.dll", "data" -Recurse | ForEach-Object {
+                $destPath = "artifacts\" + $_.Name
+                Copy-Item -Path $_.FullName -Destination $destPath -Force
+            }
         }
-    
-    - name: Upload Debug Build
+        
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: windows-debug-app
-        path: build/windows/runner/Debug/
-        if-no-files-found: warn
-    
-    - name: Upload Entire Build Directory
+        name: english-assessment-app-${{ matrix.build-type }}
+        path: artifacts/
+        
+    - name: Create ZIP Archive
+      shell: pwsh
+      run: |
+        Compress-Archive -Path "artifacts\*" -DestinationPath "english_assessment_app_${{ matrix.build-type }}.zip" -Force
+        
+    - name: Upload ZIP
       uses: actions/upload-artifact@v4
       with:
-        name: full-build-output
-        path: build/windows/
-        if-no-files-found: warn
+        name: english-assessment-app-${{ matrix.build-type }}-zip
+        path: english_assessment_app_${{ matrix.build-type }}.zip
