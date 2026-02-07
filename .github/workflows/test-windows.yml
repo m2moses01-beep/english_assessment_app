@@ -80,3 +80,4 @@ IDR_APPLICATION_MANIFEST RT_MANIFEST "runner.exe.manifest"
       with:
         name: windows-app
         path: build/windows/runner/Release/
+
