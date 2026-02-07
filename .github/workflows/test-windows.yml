@@ -1,52 +1,70 @@
-﻿name: Test Windows Build
+name: Build Windows
 
 on:
-  workflow_dispatch:  # Manual trigger only
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  test-windows:
+  build-windows:
     runs-on: windows-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
+    - uses: actions/checkout@v4
+    
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        channel: stable
+        flutter-version: '3.38.9'
+    
+    - name: Enable Windows Desktop
+      run: flutter config --enable-windows-desktop
+    
+    - name: Fix Windows Files
+      run: |
+        echo "=== FIXING CRITICAL WINDOWS ISSUES ==="
         
-    - name: Install dependencies
+        # Fix 1: resource.h (BOM + missing IDI_APP_ICON)
+        echo "#pragma once" > windows/runner/resource.h
+        echo "" >> windows/runner/resource.h
+        echo "#define IDI_APP_ICON                    101" >> windows/runner/resource.h
+        echo "#define IDR_APPLICATION_MANIFEST        102" >> windows/runner/resource.h
+        
+        echo "✅ Fixed resource.h"
+        
+        # Fix 2: Ensure runner.rc exists
+        if (!(Test-Path "windows/runner/runner.rc")) {
+          echo '#include "resource.h"' > windows/runner/runner.rc
+          echo '' >> windows/runner/runner.rc
+          echo 'IDI_APP_ICON ICON "resources/app_icon.ico"' >> windows/runner/runner.rc
+          echo '' >> windows/runner/runner.rc
+          echo 'IDR_APPLICATION_MANIFEST RT_MANIFEST "runner.exe.manifest"' >> windows/runner/runner.rc
+          echo "✅ Created runner.rc"
+        }
+        
+        # Fix 3: Create placeholder icon if missing
+        if (!(Test-Path "windows/runner/resources/app_icon.ico")) {
+          New-Item -ItemType Directory -Force -Path "windows/runner/resources" | Out-Null
+          # Create minimal 1x1 pixel icon
+          [byte[]]$icoBytes = @(0,0,1,0,1,0,1,1,0,0,1,0,8,0,40,0,0,0,22,0,0,0,40,0,0,0,1,0,0,0,2,0,0,0,1,0,8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,255,255,0,0,0,0,0)
+          [System.IO.File]::WriteAllBytes("windows/runner/resources/app_icon.ico", $icoBytes)
+          echo "✅ Created placeholder app_icon.ico"
+        }
+        
+        echo "=== FIXED FILES ==="
+        Get-Content windows/runner/resource.h
+    
+    - name: Install Dependencies
       run: flutter pub get
-          - name: Fix Windows Files Before Build
-      run: |
-        echo "=== FIXING WINDOWS FILES ==="
-        
-        # Backup original files
-        cp windows/runner/resource.h windows/runner/resource.h.backup 2>/dev/null || true
-        
-        # Create clean resource.h WITHOUT BOM
-        cat > windows/runner/resource.h << 'EOF'
-#pragma once
-
-#define IDI_APP_ICON                    101
-#define IDR_APPLICATION_MANIFEST        102
-EOF
-        
-        echo "✅ Created clean resource.h"
-        
-        # Ensure resources directory exists
-        mkdir -p windows/runner/resources
-        
-        # Show what we've done
-        echo "Fixed files:"
-        cat windows/runner/resource.h
-    - name: Test Windows build
-      run: |
-        echo "=== Testing Windows build ==="
-        flutter config --enable-windows
-        flutter doctor
-        flutter build windows --release --verbose
-        echo "=== Build output ==="
-        dir build\windows -Recurse -Filter *.exe 2>&1 || echo "No .exe found"
-
+    
+    - name: Build Windows
+      run: flutter build windows --release
+    
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-build
+        path: build/windows/runner/Release/*.exe
+        retention-days: 7
