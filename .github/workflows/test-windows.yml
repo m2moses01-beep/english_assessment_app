@@ -9,6 +9,7 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
+    
     steps:
     - uses: actions/checkout@v4
     
@@ -18,11 +19,11 @@ jobs:
         channel: 'stable'
         cache: true
     
-    - name: Fix Windows Files
+    - name: Fix Windows Build Files
       run: |
         Write-Host "=== Fixing Windows Build Files ===" -ForegroundColor Green
         
-        # 1. Create resource.h with correct content
+        # Create or fix resource.h
         $resourceContent = @'
 #pragma once
 
@@ -32,7 +33,7 @@ jobs:
         Set-Content -Path "windows/runner/resource.h" -Value $resourceContent -Encoding ASCII
         Write-Host "✅ Fixed resource.h" -ForegroundColor Green
         
-        # 2. Create runner.rc if missing
+        # Create runner.rc if missing
         if (!(Test-Path "windows/runner/runner.rc")) {
           $runnerRcContent = @'
 #include "resource.h"
@@ -45,14 +46,14 @@ IDR_APPLICATION_MANIFEST RT_MANIFEST "runner.exe.manifest"
           Write-Host "✅ Created runner.rc" -ForegroundColor Green
         }
         
-        # 3. Create resources directory and placeholder icon
+        # Create resources directory if missing
         if (!(Test-Path "windows/runner/resources")) {
           New-Item -ItemType Directory -Path "windows/runner/resources" -Force | Out-Null
           Write-Host "✅ Created resources directory" -ForegroundColor Green
         }
         
+        # Create placeholder icon if missing
         if (!(Test-Path "windows/runner/resources/app_icon.ico")) {
-          # Minimal ICO file
           $iconBytes = @(
             0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x01, 
             0x00, 0x00, 0x01, 0x00, 0x08, 0x00, 0x28, 0x00, 
@@ -67,14 +68,15 @@ IDR_APPLICATION_MANIFEST RT_MANIFEST "runner.exe.manifest"
           [System.IO.File]::WriteAllBytes("windows/runner/resources/app_icon.ico", $iconBytes)
           Write-Host "✅ Created app_icon.ico" -ForegroundColor Green
         }
-        
-        Write-Host "=== Verification ===" -ForegroundColor Cyan
-        Write-Host "resource.h exists: $(Test-Path 'windows/runner/resource.h')"
-        Write-Host "runner.rc exists: $(Test-Path 'windows/runner/runner.rc')"
-        Write-Host "app_icon.ico exists: $(Test-Path 'windows/runner/resources/app_icon.ico')"
     
     - name: Install Dependencies
       run: flutter pub get
     
     - name: Build Windows
       run: flutter build windows --release
+    
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-app
+        path: build/windows/runner/Release/
