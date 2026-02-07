@@ -15,19 +15,20 @@ jobs:
       uses: subosito/flutter-action@v2
     
     - name: Create Required Windows Files
+      shell: cmd  # <-- USE CMD INSTEAD OF POWERSHELL
       run: |
-        # Create the essential files
-        echo "#pragma once" > windows/runner/resource.h
-        echo. >> windows/runner/resource.h
-        echo "#define IDI_APP_ICON 101" >> windows/runner/resource.h
-        echo "#define IDR_APPLICATION_MANIFEST 102" >> windows/runner/resource.h
+        rem Create the essential files using CMD syntax
+        echo #pragma once > windows\runner\resource.h
+        echo. >> windows\runner\resource.h
+        echo #define IDI_APP_ICON 101 >> windows\runner\resource.h
+        echo #define IDR_APPLICATION_MANIFEST 102 >> windows\runner\resource.h
         
-        echo "#include \"resource.h\"" > windows/runner/runner.rc
-        echo. >> windows/runner/runner.rc
-        echo "// Build works without icon for now" >> windows/runner/runner.rc
-        echo "// IDI_APP_ICON ICON \"resources/app_icon.ico\"" >> windows/runner/runner.rc
-        echo. >> windows/runner/runner.rc
-        echo "IDR_APPLICATION_MANIFEST RT_MANIFEST \"runner.exe.manifest\"" >> windows/runner/runner.rc
+        echo #include "resource.h" > windows\runner\runner.rc
+        echo. >> windows\runner\runner.rc
+        echo // Build works without icon for now >> windows\runner\runner.rc
+        echo // IDI_APP_ICON ICON "resources/app_icon.ico" >> windows\runner\runner.rc
+        echo. >> windows\runner\runner.rc
+        echo IDR_APPLICATION_MANIFEST RT_MANIFEST "runner.exe.manifest" >> windows\runner\runner.rc
     
     - name: Install Dependencies
       run: flutter pub get
