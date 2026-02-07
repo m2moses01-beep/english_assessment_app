@@ -1,0 +1,49 @@
+name: Build Windows App
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: 'stable'
+        cache: true
+    
+    - name: Create Required Windows Files
+      run: |
+        # Create minimal required files using simple commands
+        echo "#pragma once" > windows/runner/resource.h
+        echo "" >> windows/runner/resource.h
+        echo "#define IDI_APP_ICON 101" >> windows/runner/resource.h
+        echo "#define IDR_APPLICATION_MANIFEST 102" >> windows/runner/resource.h
+        
+        # Create runner.rc
+        echo "#include \"resource.h\"" > windows/runner/runner.rc
+        echo "" >> windows/runner/runner.rc
+        echo "IDI_APP_ICON ICON \"resources/app_icon.ico\"" >> windows/runner/runner.rc
+        echo "" >> windows/runner/runner.rc
+        echo "IDR_APPLICATION_MANIFEST RT_MANIFEST \"runner.exe.manifest\"" >> windows/runner/runner.rc
+        
+        # Create resources directory and a tiny icon
+        mkdir -p windows/runner/resources
+        
+        # Create a TINY valid icon (just 70 bytes instead of thousands!)
+        echo -ne '\x00\x00\x01\x00\x01\x00\x01\x01\x00\x00\x01\x00\x08\x00\x28\x00\x00\x00\x16\x00\x00\x00\x28\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x01\x00\x08\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xFF\xFF\xFF\x00\x00\x00\x00\x00' > windows/runner/resources/app_icon.ico
+        
+        echo "✅ Windows files created successfully"
+    
+    - name: Install Dependencies
+      run: flutter pub get
+    
+    - name: Build Windows
+      run: flutter build windows --release
