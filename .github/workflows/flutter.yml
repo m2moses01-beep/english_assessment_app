@@ -3,60 +3,53 @@ name: Flutter Build
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
         flutter-version: '3.22.0'
         
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '11'
+      
     - name: Setup Android SDK
-      uses: android-actions/setup-android@v2
+      uses: android-actions/setup-android@v3
       
-    - name: Fix pubspec.yaml SDK constraint
+    - name: Verify Files
       run: |
-        echo "Adding SDK constraint to pubspec.yaml..."
-        # Check if environment section exists
-        if ! grep -q "environment:" pubspec.yaml; then
-          # Add environment section at the beginning
-          sed -i '1i environment:\n  sdk: ">=3.0.0 <4.0.0"\n  flutter: ">=1.17.0"' pubspec.yaml
-        fi
-        
-        echo "=== Updated pubspec.yaml ==="
-        head -10 pubspec.yaml
-      
-    - name: Fix Android SDK Version
-      run: |
-        echo "Setting Android SDK to 34..."
-        sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 34/g' android/app/build.gradle
-        sed -i 's/targetSdkVersion flutter.targetSdkVersion/targetSdkVersion 34/g' android/app/build.gradle
-        sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 34/g' android/app/build.gradle
-        sed -i 's/targetSdkVersion [0-9]*/targetSdkVersion 34/g' android/app/build.gradle
-        
-        echo "=== Verification ==="
-        grep -n "compileSdkVersion\|targetSdkVersion" android/app/build.gradle
-      
-    - name: Verify Assets
-      run: |
+        echo "=== Checking pubspec.yaml ==="
+        head -15 pubspec.yaml
+        echo ""
         echo "=== Checking assets ==="
-        ls -la assets/branding/
-        echo "File list:"
-        find assets/branding/ -name "*.png" | cat
+        find assets/ -type f 2>/dev/null || echo "No assets folder found"
+        echo ""
+        echo "=== Checking Android SDK ==="
+        grep -n "compileSdkVersion\|targetSdkVersion" android/app/build.gradle
       
     - name: Install dependencies
       run: flutter pub get
+      
+    - name: Analyze code
+      run: flutter analyze
       
     - name: Build APK
       run: flutter build apk --release
       
     - name: Upload APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: adaptilearn-apk
         path: build/app/outputs/flutter-apk/app-release.apk
+        retention-days: 7
