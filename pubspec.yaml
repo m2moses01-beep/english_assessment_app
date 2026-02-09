@@ -6,42 +6,42 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Setup Java 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'zulu'
-        java-version: '17'
     
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
         flutter-version: '3.22.0'
       
-    - name: Fix Android SDK Manually
+    - name: Create local.properties
       run: |
-        echo "Manually setting Android SDK to 34 in build.gradle..."
-        # Update compileSdkVersion
-        sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 34/g' android/app/build.gradle
-        sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 34/g' android/app/build.gradle
+        echo "sdk.dir=/usr/local/lib/android/sdk" > android/local.properties
+        echo "flutter.sdk=/opt/hostedtoolcache/flutter/stable-3.22.0-x64" >> android/local.properties
+        echo "flutter.buildMode=release" >> android/local.properties
+        echo "flutter.versionName=1.0.0" >> android/local.properties
+        echo "flutter.versionCode=1" >> android/local.properties
+      
+    - name: Preconfigure Android
+      run: |
+        # Accept licenses non-interactively
+        yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
         
-        # Update targetSdkVersion
-        sed -i 's/targetSdkVersion flutter.targetSdkVersion/targetSdkVersion 34/g' android/app/build.gradle
-        sed -i 's/targetSdkVersion [0-9]*/targetSdkVersion 34/g' android/app/build.gradle
-        
-        echo "Updated Android SDK to 34"
+        # Install required platforms
+        /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" || true
       
     - name: Install dependencies
       run: flutter pub get
       
     - name: Build APK
       run: |
-        # Skip Android SDK license check
-        echo "Building APK..."
+        # Force Android SDK 34
+        sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 34/g' android/app/build.gradle
+        sed -i 's/targetSdkVersion flutter.targetSdkVersion/targetSdkVersion 34/g' android/app/build.gradle
+        
+        # Build
         flutter build apk --release --no-pub
       
     - name: Upload APK
