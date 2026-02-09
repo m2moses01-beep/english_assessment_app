@@ -1,0 +1,13 @@
+- name: Update Android SDK
+  run: |
+    # Update app/build.gradle
+    sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 34/g' android/app/build.gradle
+    sed -i 's/targetSdkVersion flutter.targetSdkVersion/targetSdkVersion 34/g' android/app/build.gradle
+    
+    # Also update if it's hardcoded to 33
+    sed -i 's/compileSdkVersion 33/compileSdkVersion 34/g' android/app/build.gradle
+    sed -i 's/targetSdkVersion 33/targetSdkVersion 34/g' android/app/build.gradle
+    
+    # Verify the change
+    echo "=== Checking build.gradle ==="
+    grep -n "compileSdkVersion\|targetSdkVersion" android/app/build.gradle
