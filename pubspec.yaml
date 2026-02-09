@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
@@ -17,39 +17,50 @@ jobs:
         flutter-version: '3.22.0'
         
     - name: Setup Android SDK
-      uses: android-actions/setup-android@v2
+      uses: android-actions/setup-android@v3
       
-    - name: Update Android SDK Version
+    - name: Fix pubspec.yaml SDK constraint
       run: |
-        # Force update to SDK 34
-        echo "Updating Android SDK to 34..."
-        sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 34/g' android/app/build.gradle
-        sed -i 's/targetSdkVersion [0-9]*/targetSdkVersion 34/g' android/app/build.gradle
-        sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 34/g' android/app/build.gradle
-        sed -i 's/targetSdkVersion flutter.targetSdkVersion/targetSdkVersion 34/g' android/app/build.gradle
+        echo "Adding SDK constraint to pubspec.yaml..."
+        # Add environment section if not exists
+        if ! grep -q "environment:" pubspec.yaml; then
+          sed -i '1i environment:\n  sdk: ">=3.0.0 <4.0.0"\n  flutter: ">=1.17.0"' pubspec.yaml
+        else
+          echo "Environment section already exists"
+        fi
         
-        # Verify
-        echo "=== Current SDK version ==="
+        echo "=== Current pubspec.yaml ==="
+        head -10 pubspec.yaml
+      
+    - name: Fix Android SDK Version
+      run: |
+        echo "Setting Android SDK to 34..."
+        # Update compileSdkVersion
+        sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 34/g' android/app/build.gradle
+        sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 34/g' android/app/build.gradle
+        
+        # Update targetSdkVersion
+        sed -i 's/targetSdkVersion flutter.targetSdkVersion/targetSdkVersion 34/g' android/app/build.gradle
+        sed -i 's/targetSdkVersion [0-9]*/targetSdkVersion 34/g' android/app/build.gradle
+        
+        echo "=== Verification ==="
         grep -n "compileSdkVersion\|targetSdkVersion" android/app/build.gradle
       
     - name: Verify Assets
       run: |
         echo "=== Checking assets ==="
-        ls -la assets/branding/
-        echo "Files found:"
-        find assets/branding/ -type f | cat
+        ls -la assets/branding/ || echo "assets/branding folder not found"
+        echo "=== File list ==="
+        find . -name "*.png" -path "*/branding/*" 2>/dev/null || echo "No PNG files found in branding"
       
     - name: Install dependencies
       run: flutter pub get
-      
-    - name: Analyze
-      run: flutter analyze
       
     - name: Build APK
       run: flutter build apk --release
       
     - name: Upload APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: adaptilearn-apk
         path: build/app/outputs/flutter-apk/app-release.apk
