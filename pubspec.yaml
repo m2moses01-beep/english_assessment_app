@@ -20,5 +20,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/branding/ALA logo.png
-    - assets/branding/ALA app icon.png
+    - assets/branding/ala_logo.png
+    - assets/branding/ala_app_icon.png
+
