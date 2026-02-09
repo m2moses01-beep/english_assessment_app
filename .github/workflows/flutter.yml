@@ -11,54 +11,13 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Clean Everything
-      run: |
-        echo "=== Cleaning build cache ==="
-        rm -rf ~/.gradle/caches/
-        rm -rf android/.gradle/
-        rm -rf build/
-        flutter clean
-        
-    - name: Nuclear Fix - All Kotlin References
-      run: |
-        echo "=== NUCLEAR FIX: Removing ALL kotlin variables ==="
-        
-        # 1. Fix ALL gradle files
-        for file in $(find . -name "*.gradle" -o -name "*.kts"); do
-          echo "Fixing: $file"
-          # Replace $kotlin_version with 1.9.22
-          sed -i 's/\$kotlin_version/1.9.22/g' "$file" 2>/dev/null || true
-          # Remove ext.kotlin_version lines
-          sed -i '/ext.kotlin_version/d' "$file" 2>/dev/null || true
-        done
-        
-        # 2. Specifically fix app/build.gradle dependencies
-        sed -i 's/implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:.*"/implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.22"/g' android/app/build.gradle
-        sed -i 's/implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$.*"/implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.22"/g' android/app/build.gradle
-        
-        # 3. Fix SDK versions
-        sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle
-        sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' android/app/build.gradle
-        
-        echo "=== VERIFICATION ==="
-        echo "Files with \$kotlin_version:"
-        grep -r "\$kotlin_version" . 2>/dev/null || echo "NONE - GOOD!"
-        
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
+    - uses: subosito/flutter-action@v2
       with:
         flutter-version: '3.22.0'
       
-    - name: Install dependencies
-      run: flutter pub get
-      
-    - name: Build with Clean Cache
-      run: |
-        # Build with clean cache
-        flutter build apk --release --no-build-cache
-      
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
+    - run: flutter pub get
+    - run: flutter build apk --release
+    - uses: actions/upload-artifact@v4
       with:
         name: adaptilearn-apk
         path: build/app/outputs/flutter-apk/app-release.apk
