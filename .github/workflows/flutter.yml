@@ -11,72 +11,51 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: '3.22.0'
-      
-    - name: Nuclear Fix - Replace All Files
+    - name: Clean Everything
       run: |
-        echo "=== NUCLEAR FIX - Replacing all problematic files ==="
+        echo "=== Cleaning build cache ==="
+        rm -rf ~/.gradle/caches/
+        rm -rf android/.gradle/
+        rm -rf build/
+        flutter clean
         
-        # 1. COMPLETELY REPLACE android/build.gradle
-        rm -f android/build.gradle
-        cat > android/build.gradle << 'END'
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.4'
-        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22'
-    }
-}
-
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-
-rootProject.buildDir = '../build'
-subprojects {
-    project.buildDir = "\${rootProject.buildDir}/\${project.name}"
-}
-subprojects {
-    project.evaluationDependsOn(':app')
-}
-
-tasks.register("clean", Delete) {
-    delete rootProject.buildDir
-}
-END
+    - name: Nuclear Fix - All Kotlin References
+      run: |
+        echo "=== NUCLEAR FIX: Removing ALL kotlin variables ==="
         
-        # 2. Fix android/app/build.gradle - Remove ALL $kotlin_version
-        sed -i 's/\$kotlin_version/1.9.22/g' android/app/build.gradle
+        # 1. Fix ALL gradle files
+        for file in $(find . -name "*.gradle" -o -name "*.kts"); do
+          echo "Fixing: $file"
+          # Replace $kotlin_version with 1.9.22
+          sed -i 's/\$kotlin_version/1.9.22/g' "$file" 2>/dev/null || true
+          # Remove ext.kotlin_version lines
+          sed -i '/ext.kotlin_version/d' "$file" 2>/dev/null || true
+        done
+        
+        # 2. Specifically fix app/build.gradle dependencies
+        sed -i 's/implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:.*"/implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.22"/g' android/app/build.gradle
+        sed -i 's/implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$.*"/implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.22"/g' android/app/build.gradle
         
         # 3. Fix SDK versions
         sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle
         sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' android/app/build.gradle
         
-        # 4. Remove any ext.kotlin_version lines
-        sed -i '/ext.kotlin_version/d' android/app/build.gradle
+        echo "=== VERIFICATION ==="
+        echo "Files with \$kotlin_version:"
+        grep -r "\$kotlin_version" . 2>/dev/null || echo "NONE - GOOD!"
         
-        echo "=== Verification ==="
-        echo "Check 1 - No \$kotlin_version in build.gradle:"
-        grep -n "\$kotlin_version" android/build.gradle || echo "GOOD: No \$kotlin_version found"
-        echo ""
-        echo "Check 2 - SDK versions:"
-        grep -n "compileSdkVersion\|targetSdkVersion" android/app/build.gradle
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.22.0'
       
     - name: Install dependencies
       run: flutter pub get
       
-    - name: Build APK
-      run: flutter build apk --release
+    - name: Build with Clean Cache
+      run: |
+        # Build with clean cache
+        flutter build apk --release --no-build-cache
       
     - name: Upload APK
       uses: actions/upload-artifact@v4
