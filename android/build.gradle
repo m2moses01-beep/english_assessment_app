@@ -25,20 +25,6 @@ subprojects {
 subprojects {
     project.evaluationDependsOn(':app')
 }
-- name: Debug - Find $kotlin_version
-  run: |
-    echo "=== Searching ALL files for \$kotlin_version ==="
-    find . -type f -name "*.gradle" -o -name "*.kts" | xargs grep -l "\$kotlin_version" 2>/dev/null || echo "No files found with \$kotlin_version"
-    
-    echo ""
-    echo "=== Checking android/app/build.gradle ==="
-    grep -n "kotlin" android/app/build.gradle || echo "No kotlin references"
-    
-    echo ""
-    echo "=== Full android/app/build.gradle ==="
-    cat android/app/build.gradle
 
-tasks.register("clean", Delete) {
-    delete rootProject.buildDir
-}
+
 
