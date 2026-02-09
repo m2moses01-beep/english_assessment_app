@@ -16,50 +16,61 @@ jobs:
       with:
         flutter-version: '3.22.0'
       
-    - name: Fix Gradle Files
+    - name: Nuclear Fix - Replace All Files
       run: |
-        echo "=== Fixing Gradle Files ==="
+        echo "=== NUCLEAR FIX - Replacing all problematic files ==="
         
-        # Fix android/build.gradle with proper variable
-        cat > android/build.gradle << "EOF"
-        buildscript {
-            ext.kotlin_version = '1.9.22'
-            repositories {
-                google()
-                mavenCentral()
-            }
+        # 1. COMPLETELY REPLACE android/build.gradle
+        rm -f android/build.gradle
+        cat > android/build.gradle << 'END'
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
 
-            dependencies {
-                classpath 'com.android.tools.build:gradle:8.1.4'
-                classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version"
-            }
-        }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.1.4'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22'
+    }
+}
 
-        allprojects {
-            repositories {
-                google()
-                mavenCentral()
-            }
-        }
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
 
-        rootProject.buildDir = '../build'
-        subprojects {
-            project.buildDir = "\${rootProject.buildDir}/\${project.name}"
-        }
-        subprojects {
-            project.evaluationDependsOn(':app')
-        }
+rootProject.buildDir = '../build'
+subprojects {
+    project.buildDir = "\${rootProject.buildDir}/\${project.name}"
+}
+subprojects {
+    project.evaluationDependsOn(':app')
+}
 
-        tasks.register("clean", Delete) {
-            delete rootProject.buildDir
-        }
-        EOF
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
+END
         
-        # Fix android/app/build.gradle SDK versions
+        # 2. Fix android/app/build.gradle - Remove ALL $kotlin_version
+        sed -i 's/\$kotlin_version/1.9.22/g' android/app/build.gradle
+        
+        # 3. Fix SDK versions
         sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle
         sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' android/app/build.gradle
         
-        echo "=== Gradle files fixed ==="
+        # 4. Remove any ext.kotlin_version lines
+        sed -i '/ext.kotlin_version/d' android/app/build.gradle
+        
+        echo "=== Verification ==="
+        echo "Check 1 - No \$kotlin_version in build.gradle:"
+        grep -n "\$kotlin_version" android/build.gradle || echo "GOOD: No \$kotlin_version found"
+        echo ""
+        echo "Check 2 - SDK versions:"
+        grep -n "compileSdkVersion\|targetSdkVersion" android/app/build.gradle
       
     - name: Install dependencies
       run: flutter pub get
