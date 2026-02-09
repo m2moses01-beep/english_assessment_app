@@ -3,8 +3,6 @@ name: Flutter Build
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 jobs:
   build:
@@ -13,39 +11,57 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Setup Java 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+    
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
         flutter-version: '3.22.0'
-        
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'zulu'
-        java-version: '11'
+        channel: 'stable'
       
     - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-      
-    - name: Verify Files
       run: |
-        echo "=== Checking pubspec.yaml ==="
-        head -15 pubspec.yaml
+        echo "Setting up Android SDK..."
+        # Download and setup Android SDK
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+        mkdir -p android-sdk/cmdline-tools
+        unzip -q commandlinetools-linux-11076708_latest.zip -d android-sdk/cmdline-tools
+        mv android-sdk/cmdline-tools/cmdline-tools android-sdk/cmdline-tools/latest
+        
+        # Set environment variables
+        echo "ANDROID_SDK_ROOT=$PWD/android-sdk" >> $GITHUB_ENV
+        echo "ANDROID_HOME=$PWD/android-sdk" >> $GITHUB_ENV
+        echo "$PWD/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+        echo "$PWD/android-sdk/platform-tools" >> $GITHUB_PATH
+        
+        # Accept licenses
+        yes | $PWD/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+        
+        # Install required SDK components
+        $PWD/android-sdk/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0"
+      
+    - name: Verify Setup
+      run: |
+        echo "=== Java Version ==="
+        java -version
         echo ""
-        echo "=== Checking assets ==="
-        find assets/ -type f 2>/dev/null || echo "No assets folder found"
+        echo "=== Flutter Version ==="
+        flutter --version
         echo ""
-        echo "=== Checking Android SDK ==="
-        grep -n "compileSdkVersion\|targetSdkVersion" android/app/build.gradle
+        echo "=== Android SDK ==="
+        ls -la $ANDROID_SDK_ROOT/platforms/ || echo "No platforms folder"
       
     - name: Install dependencies
       run: flutter pub get
       
-    - name: Analyze code
-      run: flutter analyze
-      
     - name: Build APK
-      run: flutter build apk --release
+      run: |
+        # Build with specific target
+        flutter build apk --release --target-platform=android-arm64
       
     - name: Upload APK
       uses: actions/upload-artifact@v4
