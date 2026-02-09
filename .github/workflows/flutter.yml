@@ -1,43 +1,62 @@
-﻿name: Android APK Build
+name: Flutter Build
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
-
-    - name: Setup Flutter (3.22.0 - stable)
+    - uses: actions/checkout@v3
+    
+    - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
         flutter-version: '3.22.0'
-        channel: stable
-        cache: true
-
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v2
+      
+    - name: Fix pubspec.yaml SDK constraint
+      run: |
+        echo "Adding SDK constraint to pubspec.yaml..."
+        # Check if environment section exists
+        if ! grep -q "environment:" pubspec.yaml; then
+          # Add environment section at the beginning
+          sed -i '1i environment:\n  sdk: ">=3.0.0 <4.0.0"\n  flutter: ">=1.17.0"' pubspec.yaml
+        fi
+        
+        echo "=== Updated pubspec.yaml ==="
+        head -10 pubspec.yaml
+      
+    - name: Fix Android SDK Version
+      run: |
+        echo "Setting Android SDK to 34..."
+        sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 34/g' android/app/build.gradle
+        sed -i 's/targetSdkVersion flutter.targetSdkVersion/targetSdkVersion 34/g' android/app/build.gradle
+        sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 34/g' android/app/build.gradle
+        sed -i 's/targetSdkVersion [0-9]*/targetSdkVersion 34/g' android/app/build.gradle
+        
+        echo "=== Verification ==="
+        grep -n "compileSdkVersion\|targetSdkVersion" android/app/build.gradle
+      
+    - name: Verify Assets
+      run: |
+        echo "=== Checking assets ==="
+        ls -la assets/branding/
+        echo "File list:"
+        find assets/branding/ -name "*.png" | cat
+      
     - name: Install dependencies
       run: flutter pub get
-
-    - name: Check Flutter doctor
-      run: flutter doctor -v
-
-    - name: Build Android APK
+      
+    - name: Build APK
       run: flutter build apk --release
-
+      
     - name: Upload APK
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
-        name: android-apk
+        name: adaptilearn-apk
         path: build/app/outputs/flutter-apk/app-release.apk
-        retention-days: 7
