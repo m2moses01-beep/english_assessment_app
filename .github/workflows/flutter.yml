@@ -16,6 +16,74 @@ jobs:
       with:
         flutter-version: '3.22.0'
       
+    - name: Fix Everything
+      run: |
+        # 1. Fix pubspec.yaml
+        if ! grep -q "environment:" pubspec.yaml; then
+          cat > pubspec.yaml << 'EOF'
+          environment:
+            sdk: '>=3.0.0 <4.0.0'
+            flutter: '>=1.17.0'
+          
+          name: adaptilearn_africa
+          description: AdaptiLearn Africa - Uganda Primary English Assessment
+          version: 1.0.0+1
+          
+          flutter:
+            uses-material-design: true
+            
+            assets:
+              - assets/branding/ala_logo.png
+              - assets/branding/ala_app_icon.png
+          
+          dependencies:
+            flutter:
+              sdk: flutter
+            shared_preferences: ^2.2.2
+          EOF
+        fi
+        
+        # 2. Fix android/build.gradle
+        cat > android/build.gradle << 'EOF'
+        buildscript {
+            ext.kotlin_version = '1.9.22'
+            repositories {
+                google()
+                mavenCentral()
+            }
+
+            dependencies {
+                classpath 'com.android.tools.build:gradle:8.1.4'
+                classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version"
+            }
+        }
+
+        allprojects {
+            repositories {
+                google()
+                mavenCentral()
+            }
+        }
+
+        rootProject.buildDir = '../build'
+        subprojects {
+            project.buildDir = "\${rootProject.buildDir}/\${project.name}"
+        }
+        subprojects {
+            project.evaluationDependsOn(':app')
+        }
+
+        tasks.register("clean", Delete) {
+            delete rootProject.buildDir
+        }
+        EOF
+        
+        # 3. Fix android/app/build.gradle SDK
+        sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle
+        sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' android/app/build.gradle
+        
+        echo "=== All fixes applied ==="
+      
     - name: Install dependencies
       run: flutter pub get
       
