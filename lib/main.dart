@@ -1051,11 +1051,11 @@ class HomeScreen extends StatelessWidget {
             children: [
 const SizedBox(height: 20),
 
-// ======== ADD YOUR LOGO HERE ========
+// ======== ENLARGED LOGO ========
 Center(
   child: Image.asset(
     'assets/branding/ala_logo.png',
-    height: 80,
+    height: 100,  // ← CHANGED FROM 80 TO 100
     fit: BoxFit.contain,
     errorBuilder: (context, error, stackTrace) {
       return Column(
@@ -2383,5 +2383,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Colors.red;
   }
 }
+
 
 
