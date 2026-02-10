@@ -50,33 +50,191 @@ class Question {
 /* =======================
    DATA
 ======================= */
+// lib/data/p5_trial_questions.dart
 final List<Question> p5TrialQuestions = [
+  // 1. GRAMMAR - TENSES (Common in UNEB)
   Question(
-    id: 'p5_001',
+    id: 'p5_eng_001',
     text: 'Choose the correct verb: Kato ___ football every Saturday.',
     options: ['play', 'plays', 'playing', 'played'],
-    correctIndex: 1,
-    explanation: 'Singular subject → verb takes -s.',
-    topic: 'Grammar',
+    correctIndex: 1, // "plays"
+    explanation: 'With singular subject "Kato", use "plays" (present simple for routines). "He/She/It" verbs add "s".',
+    topic: 'Grammar - Present Tense',
     difficulty: 'Easy',
   ),
+
+  // 2. GRAMMAR - PREPOSITIONS
   Question(
-    id: 'p5_002',
-    text: 'What is the plural of "knife"?',
-    options: ['knifes', 'knives', 'knife', 'knive'],
-    correctIndex: 1,
-    explanation: 'Knife → knives (f → ves).',
-    topic: 'Grammar',
+    id: 'p5_eng_002',
+    text: 'Complete: She is good ___ mathematics.',
+    options: ['at', 'in', 'with', 'for'],
+    correctIndex: 0, // "at"
+    explanation: 'We use "good at" for skills/subjects. "Good in" is for places, "good with" for people/tools.',
+    topic: 'Grammar - Prepositions',
+    difficulty: 'Easy',
+  ),
+
+  // 3. VOCABULARY - ANTONYMS
+  Question(
+    id: 'p5_eng_003',
+    text: 'What is the opposite of "generous"?',
+    options: ['kind', 'selfish', 'rich', 'happy'],
+    correctIndex: 1, // "selfish"
+    explanation: 'Generous means willing to give/share. Selfish means keeping everything for yourself.',
+    topic: 'Vocabulary - Antonyms',
     difficulty: 'Medium',
   ),
+
+  // 4. GRAMMAR - PLURALS (IRREGULAR)
   Question(
-    id: 'p5_003',
-    text: 'What is the capital city of Uganda?',
-    options: ['Nairobi', 'Kampala', 'Kigali', 'Juba'],
-    correctIndex: 1,
-    explanation: 'Kampala is the capital of Uganda.',
-    topic: 'General Knowledge',
+    id: 'p5_eng_004',
+    text: 'What is the plural of "knife"?',
+    options: ['knifes', 'knives', 'knife', 'knive'],
+    correctIndex: 1, // "knives"
+    explanation: 'For words ending with -fe, change to -ves: knife→knives, wife→wives, life→lives.',
+    topic: 'Grammar - Irregular Plurals',
+    difficulty: 'Medium',
+  ),
+
+  // 5. COMPREHENSION - ANALOGIES
+  Question(
+    id: 'p5_eng_005',
+    text: 'Doctor is to hospital as teacher is to ___.',
+    options: ['school', 'book', 'student', 'class'],
+    correctIndex: 0, // "school"
+    explanation: 'A doctor works in a hospital. A teacher works in a school. This is a workplace analogy.',
+    topic: 'Comprehension - Analogies',
     difficulty: 'Easy',
+  ),
+
+  // 6. GRAMMAR - ARTICLES
+  Question(
+    id: 'p5_eng_006',
+    text: 'Fill the blank: She wants ___ apple from the basket.',
+    options: ['a', 'an', 'the', 'no article'],
+    correctIndex: 1, // "an"
+    explanation: 'Use "an" before vowel sounds (a, e, i, o, u). Apple starts with vowel sound "a".',
+    topic: 'Grammar - Articles',
+    difficulty: 'Easy',
+  ),
+
+  // 7. VOCABULARY - HOMOPHONES
+  Question(
+    id: 'p5_eng_007',
+    text: 'Which word means "a number": They ate ___ oranges.',
+    options: ['to', 'too', 'two', 'tow'],
+    correctIndex: 2, // "two"
+    explanation: '"Two" is the number 2. "To" shows direction, "too" means also or excessive.',
+    topic: 'Vocabulary - Homophones',
+    difficulty: 'Medium',
+  ),
+
+  // 8. GRAMMAR - CONJUNCTIONS
+  Question(
+    id: 'p5_eng_008',
+    text: 'Join: He was tired. He finished his homework.',
+    options: [
+      'He was tired, he finished his homework.',
+      'He was tired but finished his homework.',
+      'He was tired and finished his homework.',
+      'He was tired so finished his homework.'
+    ],
+    correctIndex: 1, // "He was tired but finished his homework."
+    explanation: '"But" shows contrast between being tired and still completing work. It\'s the correct conjunction.',
+    topic: 'Grammar - Conjunctions',
+    difficulty: 'Medium',
+  ),
+
+  // 9. PROVERBS (UGANDAN CONTEXT)
+  Question(
+    id: 'p5_eng_009',
+    text: 'Complete: Too many cooks ___',
+    options: ['make good soup', 'spoil the broth', 'eat all the food', 'work fast'],
+    correctIndex: 1, // "spoil the broth"
+    explanation: 'The proverb means: When too many people work on something, they often ruin it.',
+    topic: 'Proverbs & Idioms',
+    difficulty: 'Medium',
+  ),
+
+  // 10. GRAMMAR - PRONOUNS
+  Question(
+    id: 'p5_eng_010',
+    text: 'Choose correct pronoun: Mary and ___ went to the market.',
+    options: ['I', 'me', 'myself', 'mine'],
+    correctIndex: 0, // "I"
+    explanation: 'Use "I" as subject (doing the action). "Me" is object (receiving action).',
+    topic: 'Grammar - Pronouns',
+    difficulty: 'Easy',
+  ),
+
+  // 11. VOCABULARY - SYNONYMS
+  Question(
+    id: 'p5_eng_011',
+    text: 'Which means the same as "begin"?',
+    options: ['end', 'start', 'pause', 'continue'],
+    correctIndex: 1, // "start"
+    explanation: 'Begin and start are synonyms. End is opposite. Pause is temporary stop.',
+    topic: 'Vocabulary - Synonyms',
+    difficulty: 'Easy',
+  ),
+
+  // 12. COMPREHENSION - INFERENCE
+  Question(
+    id: 'p5_eng_012',
+    text: 'If someone is "punctual", they always:',
+    options: [
+      'arrive late',
+      'arrive on time',
+      'forget things',
+      'work slowly'
+    ],
+    correctIndex: 1, // "arrive on time"
+    explanation: 'Punctual means arriving or happening at the exact time, not late.',
+    topic: 'Vocabulary - Word Meaning',
+    difficulty: 'Medium',
+  ),
+
+  // 13. GRAMMAR - ADJECTIVES
+  Question(
+    id: 'p5_eng_013',
+    text: 'Choose the correct order: She has a ___ bag.',
+    options: [
+      'red beautiful big',
+      'beautiful big red',
+      'big beautiful red',
+      'big red beautiful'
+    ],
+    correctIndex: 2, // "big beautiful red"
+    explanation: 'Adjective order: Size (big) → Opinion (beautiful) → Color (red).',
+    topic: 'Grammar - Adjective Order',
+    difficulty: 'Hard',
+  ),
+
+  // 14. UGANDAN CONTEXT
+  Question(
+    id: 'p5_eng_014',
+    text: 'What is the capital city of Uganda?',
+    options: ['Nairobi', 'Kampala', 'Dar es Salaam', 'Kigali'],
+    correctIndex: 1, // "Kampala"
+    explanation: 'Kampala is the capital and largest city of Uganda.',
+    topic: 'General Knowledge - Uganda',
+    difficulty: 'Easy',
+  ),
+
+  // 15. COMPREHENSION - LOGIC
+  Question(
+    id: 'p5_eng_015',
+    text: 'All dogs are animals. Rex is a dog. Therefore:',
+    options: [
+      'Rex is not an animal',
+      'Rex might be an animal',
+      'Rex is an animal',
+      'Some animals are not dogs'
+    ],
+    correctIndex: 2, // "Rex is an animal"
+    explanation: 'If all dogs are animals, and Rex is a dog, then Rex must be an animal.',
+    topic: 'Comprehension - Logical Reasoning',
+    difficulty: 'Medium',
   ),
 ];
 
@@ -262,3 +420,4 @@ class ResultsScreen extends StatelessWidget {
     );
   }
 }
+
