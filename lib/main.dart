@@ -1049,25 +1049,44 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 30),
-              // Uganda-themed icon/logo
-              const Icon(Icons.school, size: 70, color: Colors.green),
-              const SizedBox(height: 16),
-              Text(
-                'Uganda Primary English\nAssessment Tool',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green.shade800,
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'P3-P7 Curriculum Aligned • Adaptive Testing',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey, fontSize: 14),
-              ),
+const SizedBox(height: 20),
+
+// ======== ADD YOUR LOGO HERE ========
+Center(
+  child: Image.asset(
+    'assets/branding/ala_logo.png',
+    height: 80,
+    fit: BoxFit.contain,
+    errorBuilder: (context, error, stackTrace) {
+      return Column(
+        children: [
+          Icon(Icons.error, color: Colors.red),
+          Text('Logo not found', style: TextStyle(color: Colors.red)),
+        ],
+      );
+    },
+  ),
+),
+
+const SizedBox(height: 16),
+
+Text(
+  'AdaptiLearn Africa',
+  textAlign: TextAlign.center,
+  style: TextStyle(
+    fontSize: 24,
+    fontWeight: FontWeight.bold,
+    color: Colors.green.shade800,
+  ),
+),
+
+const SizedBox(height: 4),
+
+const Text(
+  'Uganda Primary English Assessment',
+  textAlign: TextAlign.center,
+  style: TextStyle(color: Colors.grey, fontSize: 14),
+),
               
               const SizedBox(height: 30),
               
@@ -2364,4 +2383,5 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Colors.red;
   }
 }
+
 
