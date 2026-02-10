@@ -28,3 +28,4 @@ jobs:
       with:
         name: adaptilearn-apk
         path: build/app/outputs/flutter-apk/app-release.apk
+
