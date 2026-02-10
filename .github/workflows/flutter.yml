@@ -10,11 +10,25 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Fix Android Namespace
+    - name: Fix MainActivity
       run: |
-        # Quick namespace fix
-        sed -i '/compileSdkVersion 34/a\    namespace "com.adaptilearn.africa"' android/app/build.gradle
-        sed -i 's/applicationId ".*"/applicationId "com.adaptilearn.africa"/g' android/app/build.gradle
+        echo "=== Creating correct MainActivity ==="
+        
+        # 1. Create new folder with correct package
+        mkdir -p android/app/src/main/kotlin/com/adaptilearn/africa/
+        
+        # 2. Create MainActivity with correct package
+        cat > android/app/src/main/kotlin/com/adaptilearn/africa/MainActivity.kt << 'EOF'
+        package com.adaptilearn.africa
+        
+        import io.flutter.embedding.android.FlutterActivity
+        
+        class MainActivity: FlutterActivity() {
+        }
+        EOF
+        
+        echo "=== Created: android/app/src/main/kotlin/com/adaptilearn/africa/MainActivity.kt ==="
+        echo "Old folder still exists but won't be used"
     
     - uses: subosito/flutter-action@v2
       with:
@@ -28,4 +42,3 @@ jobs:
       with:
         name: adaptilearn-apk
         path: build/app/outputs/flutter-apk/app-release.apk
-
