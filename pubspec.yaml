@@ -1,41 +1,24 @@
-environment:
-  sdk: '>=3.0.0 <4.0.0'
-
-name: adaptilearn_africa
-description: AdaptiLearn Africa - Uganda Primary English Assessment
-version: 1.0.0+1
-
 flutter:
   uses-material-design: true
   
   assets:
     - assets/branding/ala_logo.png
-    - assets/icon/icon.png  # Changed to match image_path below
-
-dependencies:
-  flutter:
-    sdk: flutter
-  shared_preferences: ^2.2.2
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_launcher_icons: ^0.14.4  # Moved here from dependencies
+    - assets/branding/ala_app_icon.png  # Make sure this exists
 
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/icon/icon.png"
+  image_path: "assets/branding/ala_app_icon.png"  # Changed here!
   min_sdk_android: 21
   web:
     generate: true
-    image_path: "assets/icon/icon.png"
+    image_path: "assets/branding/ala_app_icon.png"  # Changed here!
     background_color: "#0175C2"
     theme_color: "#0175C2"
   windows:
     generate: true
-    image_path: "assets/icon/icon.png"
+    image_path: "assets/branding/ala_app_icon.png"  # Changed here!
     icon_size: 256
   macos:
     generate: true
-    image_path: "assets/icon/icon.png"
+    image_path: "assets/branding/ala_app_icon.png"  # Changed here!
