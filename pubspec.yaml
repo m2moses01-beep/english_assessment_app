@@ -1,8 +1,10 @@
 environment:
-  sdk: '>=3.0.0 <4.0.0'  # ← This line was missing or incorrect
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.0.0"
 
 name: adaptilearn_africa
 description: AdaptiLearn Africa - Uganda Primary English Assessment
+publish_to: 'none'
 version: 1.0.0+1
 
 flutter:
@@ -10,7 +12,7 @@ flutter:
   
   assets:
     - assets/branding/ala_logo.png
-    - assets/branding/ala_app_icon.png  # Make sure this file exists
+    - assets/branding/ala_app_icon.png
 
 dependencies:
   flutter:
@@ -20,13 +22,15 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: ^0.14.4
+  flutter_launcher_icons: ^0.13.1  # More stable version
 
 flutter_launcher_icons:
-  android: "launcher_icon"
+  android: true
   ios: true
-  image_path: "assets/branding/ala_app_icon.png"  # Changed to use existing file
-  min_sdk_android: 21
+  image_path: "assets/branding/ala_app_icon.png"
+  remove_alpha_ios: true
+  adaptive_icon_background: "#0175C2"
+  adaptive_icon_foreground: "assets/branding/ala_app_icon.png"
   web:
     generate: true
     image_path: "assets/branding/ala_app_icon.png"
