@@ -1,45 +1,23 @@
-environment:
-  sdk: ">=3.0.0 <4.0.0"
-  flutter: ">=3.0.0"
-
 name: adaptilearn_africa
-description: AdaptiLearn Africa - Uganda Primary English Assessment
+description: P5 English Learning App
 publish_to: 'none'
 version: 1.0.0+1
 
-flutter:
-  uses-material-design: true
-  
-  assets:
-    - assets/branding/ala_logo.png
-    - assets/branding/ala_app_icon.png
+environment:
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  shared_preferences: ^2.2.2
+  
+  # Add these for next steps:
+  url_launcher: ^6.1.0  # For WhatsApp integration
+  shared_preferences: ^2.2.0  # For saving progress
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: ^0.13.1  # More stable version
+  flutter_lints: ^2.0.0
 
-flutter_launcher_icons:
-  android: true
-  ios: true
-  image_path: "assets/branding/ala_app_icon.png"
-  remove_alpha_ios: true
-  adaptive_icon_background: "#0175C2"
-  adaptive_icon_foreground: "assets/branding/ala_app_icon.png"
-  web:
-    generate: true
-    image_path: "assets/branding/ala_app_icon.png"
-    background_color: "#0175C2"
-    theme_color: "#0175C2"
-  windows:
-    generate: true
-    image_path: "assets/branding/ala_app_icon.png"
-    icon_size: 256
-  macos:
-    generate: true
-    image_path: "assets/branding/ala_app_icon.png"
+flutter:
+  uses-material-design: true
