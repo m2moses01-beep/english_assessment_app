@@ -1055,7 +1055,7 @@ const SizedBox(height: 20),
 Center(
   child: Image.asset(
     'assets/branding/ala_logo.png',
-    height: 140,  // ← CHANGED FROM 80 TO 100
+    height: 120,  // ← CHANGED FROM 80 TO 100
     fit: BoxFit.contain,
     errorBuilder: (context, error, stackTrace) {
       return Column(
@@ -2383,6 +2383,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Colors.red;
   }
 }
+
 
 
 
