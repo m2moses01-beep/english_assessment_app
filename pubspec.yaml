@@ -1,5 +1,5 @@
 name: adaptilearn_africa
-description: Uganda Primary English Assessment
+description: "Adaptive Uganda Primary English Assessment & Learning Tool"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,14 +9,29 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  
+  # Core Data & Storage
   shared_preferences: ^2.2.2
+  path_provider: ^2.1.1
+  
+  # UI & Engagement (Adaptive Feedback)
+  google_fonts: ^6.1.0        # Better readability for English learners
+  flutter_spinkit: ^5.2.0     # Adaptive loading states
+  percent_indicator: ^4.2.3   # For those nice progress bars you want
+  
+  # Multimedia (Crucial for Primary English)
+  audioplayers: ^5.2.1        # For listening assessments/pronunciation
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_lints: ^3.0.0       # Keeps your code "Clean" as requested
 
 flutter:
   uses-material-design: true
-  
+
+  # Asset management for branding and educational content
   assets:
     - assets/branding/
+    - assets/audio/           # Store pronunciation files here
+    - assets/data/            # For JSON question banks
