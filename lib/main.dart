@@ -24,79 +24,10 @@ enum PrimaryLevel { p3, p4, p5, p6, p7 }
 enum QuestionCategory { grammar, vocabulary, reading, writing }
 
 // ============ MODELS ============
-class UgandanQuestion {
-  final String id;
-  final String text;
-  final List<String> options;
-  final int correctAnswerIndex;
-  final String explanation;
-  final PrimaryLevel level;
-  final QuestionCategory category;
-  final List<String> tags;
-  final int timesUsed;
-  final double successRate;
-  final String curriculumReference;
-  
-  UgandanQuestion({
-    required this.id,
-    required this.text,
-    required this.options,
-    required this.correctAnswerIndex,
-    required this.explanation,
-    required this.level,
-    required this.category,
-    this.tags = const [],
-    this.timesUsed = 0,
-    this.successRate = 0.5,
-    this.curriculumReference = '',
-  });
-}
+extension PrimaryLevelExtension on PrimaryLevel {
 
-class QuestionResponse {
-  final UgandanQuestion question;
-  final int? selectedAnswerIndex;
-  final bool isCorrect;
-  final Duration timeTaken;
-  
-  QuestionResponse({
-    required this.question,
-    required this.selectedAnswerIndex,
-    required this.isCorrect,
-    required this.timeTaken,
-  });
-}
-
-class TestResult {
-  final String testId;
-  final DateTime completedAt;
-  final PrimaryLevel estimatedLevel;
-  final int questionsAnswered;
-  final int correctAnswers;
-  final Duration totalTime;
-  final List<QuestionResponse> responses;
-  final int sessionNumber;
-  
-  TestResult({
-    required this.testId,
-    required this.completedAt,
-    required this.estimatedLevel,
-    required this.questionsAnswered,
-    required this.correctAnswers,
-    required this.totalTime,
-    required this.responses,
-    required this.sessionNumber,
-  });
-  
-  double get accuracy => questionsAnswered > 0 
-      ? correctAnswers / questionsAnswered 
-      : 0.0;
-}
-
-// ============ UTILITIES ============
-class AppExtensions {
-  // PrimaryLevel Extensions
-  static String getLevelName(PrimaryLevel level) {
-    switch (level) {
+  String get displayName {
+    switch (this) {
       case PrimaryLevel.p3: return 'Primary 3';
       case PrimaryLevel.p4: return 'Primary 4';
       case PrimaryLevel.p5: return 'Primary 5';
@@ -104,19 +35,17 @@ class AppExtensions {
       case PrimaryLevel.p7: return 'Primary 7';
     }
   }
-  
-  static String getLevelShortName(PrimaryLevel level) {
-    switch (level) {
-      case PrimaryLevel.p3: return 'P3';
-      case PrimaryLevel.p4: return 'P4';
-      case PrimaryLevel.p5: return 'P5';
-      case PrimaryLevel.p6: return 'P6';
-      case PrimaryLevel.p7: return 'P7';
-    }
+
+  String get shortName {
+    return 'P${index + 3}';
   }
-  
-  static Color getLevelColor(PrimaryLevel level) {
-    switch (level) {
+
+  int get numericLevel {
+    return index + 3;
+  }
+
+  Color get color {
+    switch (this) {
       case PrimaryLevel.p3: return Colors.green;
       case PrimaryLevel.p4: return Colors.blue;
       case PrimaryLevel.p5: return Colors.orange;
@@ -124,710 +53,334 @@ class AppExtensions {
       case PrimaryLevel.p7: return Colors.red;
     }
   }
-  
-  static Color getLevelLightColor(PrimaryLevel level) {
-    switch (level) {
-      case PrimaryLevel.p3: return Colors.green.shade50;
-      case PrimaryLevel.p4: return Colors.blue.shade50;
-      case PrimaryLevel.p5: return Colors.orange.shade50;
-      case PrimaryLevel.p6: return Colors.purple.shade50;
-      case PrimaryLevel.p7: return Colors.red.shade50;
-    }
-  }
-  
-  static int getLevelNumeric(PrimaryLevel level) {
-    return level.index + 3;
-  }
-  
-  // QuestionCategory Extensions
-  static String getCategoryName(QuestionCategory category) {
-    switch (category) {
+
+  Color get lightColor => color.withOpacity(0.1);
+}
+extension QuestionCategoryExtension on QuestionCategory {
+
+  String get displayName {
+    switch (this) {
       case QuestionCategory.grammar: return 'Grammar';
       case QuestionCategory.vocabulary: return 'Vocabulary';
       case QuestionCategory.reading: return 'Reading';
       case QuestionCategory.writing: return 'Writing';
     }
   }
-  
-  static IconData getCategoryIcon(QuestionCategory category) {
-    switch (category) {
+
+  IconData get icon {
+    switch (this) {
       case QuestionCategory.grammar: return Icons.g_translate;
-      case QuestionCategory.vocabulary: return Icons.wordpress;
+      case QuestionCategory.vocabulary: return Icons.book;
       case QuestionCategory.reading: return Icons.menu_book;
       case QuestionCategory.writing: return Icons.edit;
     }
   }
-  
-  // Format date
-  static String formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-  }
 }
+
 
 // ============ SESSION MANAGEMENT ============
 class SessionManager {
-  static const int MAX_SESSIONS = 3;
-  static const int QUESTIONS_PER_SESSION = 10;
-  static const int TOTAL_SAMPLE_QUESTIONS = 30;
-  
+  // ---- Constants ----
+  static const int maxSessions = 3;
+  static const int questionsPerSession = 10;
+  static const int totalSampleQuestions = 30;
+
+  // ---- Storage Keys ----
+  static const String _keyCurrentSession = 'current_session';
+  static const String _keySampleComplete = 'sample_complete';
+  static const String _keyUserLevel = 'user_level';
+  static const String _keyTotalTests = 'total_tests';
+  static const String _keyTotalQuestions = 'total_questions';
+  static const String _keyCorrectAnswers = 'correct_answers';
+  static const String _keyBestLevel = 'best_level';
+
+  // ---- Cached SharedPreferences ----
+  static SharedPreferences? _prefs;
+
+  static Future<SharedPreferences> _getPrefs() async {
+    _prefs ??= await SharedPreferences.getInstance();
+    return _prefs!;
+  }
+
+  // ---- Session Tracking ----
   static Future<int> getCurrentSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt('current_session') ?? 1;
+    final prefs = await _getPrefs();
+    return prefs.getInt(_keyCurrentSession) ?? 1;
   }
-  
+
   static Future<void> setCurrentSession(int session) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('current_session', session);
+    final prefs = await _getPrefs();
+    await prefs.setInt(_keyCurrentSession, session);
   }
-  
+
+  // ---- Sample Completion ----
   static Future<bool> isSampleComplete() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool('sample_complete') ?? false;
+    final prefs = await _getPrefs();
+    return prefs.getBool(_keySampleComplete) ?? false;
   }
-  
+
   static Future<void> markSampleComplete() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('sample_complete', true);
+    final prefs = await _getPrefs();
+    await prefs.setBool(_keySampleComplete, true);
   }
-  
+
+  // ---- Reset All Sample Data ----
   static Future<void> resetSample() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('current_session');
-    await prefs.remove('sample_complete');
-    await prefs.remove('user_level');
-    await prefs.remove('total_tests');
-    await prefs.remove('total_questions');
-    await prefs.remove('correct_answers');
-    await prefs.remove('best_level');
+    final prefs = await _getPrefs();
+
+    await prefs.remove(_keyCurrentSession);
+    await prefs.remove(_keySampleComplete);
+    await prefs.remove(_keyUserLevel);
+    await prefs.remove(_keyTotalTests);
+    await prefs.remove(_keyTotalQuestions);
+    await prefs.remove(_keyCorrectAnswers);
+    await prefs.remove(_keyBestLevel);
   }
-  
+
+  // ---- User Level ----
   static Future<PrimaryLevel?> getUserLevel() async {
-    final prefs = await SharedPreferences.getInstance();
-    final levelIndex = prefs.getInt('user_level');
-    return levelIndex != null ? PrimaryLevel.values[levelIndex] : null;
+    final prefs = await _getPrefs();
+    final levelIndex = prefs.getInt(_keyUserLevel);
+
+    if (levelIndex != null &&
+        levelIndex >= 0 &&
+        levelIndex < PrimaryLevel.values.length) {
+      return PrimaryLevel.values[levelIndex];
+    }
+
+    return null;
   }
-  
+
   static Future<void> setUserLevel(PrimaryLevel level) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('user_level', level.index);
+    final prefs = await _getPrefs();
+    await prefs.setInt(_keyUserLevel, level.index);
   }
-  
+
+  // ---- Session Progress Summary ----
   static Future<Map<String, dynamic>> getSessionProgress() async {
     final session = await getCurrentSession();
     final completed = await isSampleComplete();
-    
+
     return {
       'current_session': session,
-      'completed_sessions': session - 1,
-      'total_sessions': MAX_SESSIONS,
+      'completed_sessions': session > 1 ? session - 1 : 0,
+      'total_sessions': maxSessions,
       'is_complete': completed,
-      'questions_per_session': QUESTIONS_PER_SESSION,
-      'total_questions': TOTAL_SAMPLE_QUESTIONS,
+      'questions_per_session': questionsPerSession,
+      'total_questions': totalSampleQuestions,
     };
   }
 }
 
-// ============ SERVICES ============
-class UgandanQuestionService {
-  static final List<UgandanQuestion> allQuestions = [
-    // PRIMARY 3 Questions
-    UgandanQuestion(
-      id: 'P3_001',
-      text: 'What is the plural of "book"?',
-      options: ['book', 'books', 'bookes', 'bookies'],
+
+// ===============================
+// P5 ENGLISH ADAPTIVE ENGINE
+// Single File Architecture
+// ===============================
+
+
+
+// -------------------------------
+// ENUMS
+// -------------------------------
+
+enum QuestionCategory {
+  grammar,
+  vocabulary,
+  reading,
+  comprehension,
+  writing,
+  sentenceStructure,
+}
+
+enum Difficulty {
+  easy,
+  medium,
+  hard,
+}
+
+
+
+// -------------------------------
+// QUESTION MODEL
+// -------------------------------
+
+class P5Question {
+  final String id;
+  final String text;
+  final List<String> options;
+  final int correctAnswerIndex;
+  final String explanation;
+  final QuestionCategory category;
+  final Difficulty difficulty;
+  final List<String> tags;
+  final String curriculumReference;
+
+  P5Question({
+    required this.id,
+    required this.text,
+    required this.options,
+    required this.correctAnswerIndex,
+    required this.explanation,
+    required this.category,
+    required this.difficulty,
+    this.tags = const [],
+    this.curriculumReference = '',
+  });
+}
+
+
+
+// -------------------------------
+// QUESTION SERVICE
+// -------------------------------
+
+class P5QuestionService {
+  static final List<P5Question> allQuestions = [
+
+    P5Question(
+      id: 'g1',
+      text: 'She ____ to school every day.',
+      options: ['go', 'goes', 'gone', 'going'],
       correctAnswerIndex: 1,
-      explanation: 'Most nouns form plurals by adding "s" at the end.',
-      level: PrimaryLevel.p3,
+      explanation: 'Singular subject (She) takes "goes".',
       category: QuestionCategory.grammar,
-      tags: ['plurals', 'nouns'],
-      curriculumReference: 'P3 English: Nouns and Plurals',
+      difficulty: Difficulty.easy,
+      tags: ['present tense'],
+      curriculumReference: 'P5 English - Tenses',
     ),
-    UgandanQuestion(
-      id: 'P3_002',
-      text: 'Choose the correct word: I have ___ apple.',
-      options: ['a', 'an', 'the', 'some'],
+
+    P5Question(
+      id: 'v1',
+      text: 'Choose the synonym of "rapid".',
+      options: ['slow', 'fast', 'weak', 'late'],
       correctAnswerIndex: 1,
-      explanation: 'Use "an" before words starting with vowel sounds.',
-      level: PrimaryLevel.p3,
-      category: QuestionCategory.grammar,
-      tags: ['articles', 'a_an'],
-      curriculumReference: 'P3 English: Articles',
-    ),
-    UgandanQuestion(
-      id: 'P3_003',
-      text: 'Which word means "a young dog"?',
-      options: ['kitten', 'puppy', 'calf', 'foal'],
-      correctAnswerIndex: 1,
-      explanation: 'A young dog is called a puppy.',
-      level: PrimaryLevel.p3,
+      explanation: '"Rapid" means fast.',
       category: QuestionCategory.vocabulary,
-      tags: ['animals', 'young_animals'],
-      curriculumReference: 'P3 English: Animal Names',
+      difficulty: Difficulty.medium,
+      tags: ['synonyms'],
+      curriculumReference: 'P5 English - Vocabulary',
     ),
-    UgandanQuestion(
-      id: 'P3_004',
-      text: 'Complete: She ___ to school every day.',
-      options: ['go', 'goes', 'going', 'went'],
-      correctAnswerIndex: 1,
-      explanation: 'Present simple: he/she/it + verb + s',
-      level: PrimaryLevel.p3,
-      category: QuestionCategory.grammar,
-      tags: ['present_simple', 'verbs'],
-      curriculumReference: 'P3 English: Simple Present Tense',
-    ),
-    UgandanQuestion(
-      id: 'P3_005',
-      text: 'What is the opposite of "big"?',
-      options: ['large', 'huge', 'small', 'tall'],
+
+    P5Question(
+      id: 'g2',
+      text: 'They have ____ their homework.',
+      options: ['finish', 'finishing', 'finished', 'finishes'],
       correctAnswerIndex: 2,
-      explanation: 'Big means large in size, small means little in size.',
-      level: PrimaryLevel.p3,
-      category: QuestionCategory.vocabulary,
-      tags: ['antonyms', 'adjectives'],
-      curriculumReference: 'P3 English: Opposites',
-    ),
-    UgandanQuestion(
-      id: 'P3_006',
-      text: 'Read: "Tom has a red ball." What color is the ball?',
-      options: ['blue', 'red', 'green', 'yellow'],
-      correctAnswerIndex: 1,
-      explanation: 'The sentence says "red ball", so the ball is red.',
-      level: PrimaryLevel.p3,
-      category: QuestionCategory.reading,
-      tags: ['comprehension', 'colors'],
-      curriculumReference: 'P3 English: Reading Comprehension',
-    ),
-    
-    // PRIMARY 4 Questions
-    UgandanQuestion(
-      id: 'P4_001',
-      text: 'Yesterday, I ___ to the market.',
-      options: ['go', 'goes', 'went', 'going'],
-      correctAnswerIndex: 2,
-      explanation: '"Yesterday" indicates past tense. "Went" is past of "go".',
-      level: PrimaryLevel.p4,
+      explanation: 'Present perfect uses past participle: finished.',
       category: QuestionCategory.grammar,
-      tags: ['past_tense', 'irregular_verbs'],
-      curriculumReference: 'P4 English: Past Tense',
-    ),
-    UgandanQuestion(
-      id: 'P4_002',
-      text: 'Choose the correct pronoun: Mary and ___ are friends.',
-      options: ['I', 'me', 'my', 'mine'],
-      correctAnswerIndex: 0,
-      explanation: 'Use subject pronoun "I" when it is the subject of the sentence.',
-      level: PrimaryLevel.p4,
-      category: QuestionCategory.grammar,
-      tags: ['pronouns', 'subject_pronouns'],
-      curriculumReference: 'P4 English: Pronouns',
-    ),
-    UgandanQuestion(
-      id: 'P4_003',
-      text: 'What is a "library"?',
-      options: [
-        'A place to buy food',
-        'A place to borrow books',
-        'A place to see animals',
-        'A place to play sports'
-      ],
-      correctAnswerIndex: 1,
-      explanation: 'A library is a place where people can read or borrow books.',
-      level: PrimaryLevel.p4,
-      category: QuestionCategory.vocabulary,
-      tags: ['places', 'definitions'],
-      curriculumReference: 'P4 English: Vocabulary Building',
-    ),
-    UgandanQuestion(
-      id: 'P4_004',
-      text: 'Which sentence is correct?',
-      options: [
-        'She don\'t like milk.',
-        'She doesn\'t likes milk.',
-        'She doesn\'t like milk.',
-        'She not like milk.'
-      ],
-      correctAnswerIndex: 2,
-      explanation: 'Present simple negative: doesn\'t + base verb (without s).',
-      level: PrimaryLevel.p4,
-      category: QuestionCategory.grammar,
-      tags: ['negatives', 'present_simple'],
-      curriculumReference: 'P4 English: Negative Sentences',
-    ),
-    UgandanQuestion(
-      id: 'P4_005',
-      text: 'Read: "The cat is under the table." Where is the cat?',
-      options: ['on the table', 'beside the table', 'under the table', 'above the table'],
-      correctAnswerIndex: 2,
-      explanation: '"Under" means below or beneath something.',
-      level: PrimaryLevel.p4,
-      category: QuestionCategory.reading,
-      tags: ['prepositions', 'comprehension'],
-      curriculumReference: 'P4 English: Prepositions',
-    ),
-    UgandanQuestion(
-      id: 'P4_006',
-      text: 'Which word is spelled correctly?',
-      options: ['skool', 'schol', 'school', 'skhool'],
-      correctAnswerIndex: 2,
-      explanation: 'The correct spelling is "school".',
-      level: PrimaryLevel.p4,
-      category: QuestionCategory.writing,
-      tags: ['spelling', 'common_words'],
-      curriculumReference: 'P4 English: Spelling',
-    ),
-    
-    // PRIMARY 5 Questions
-    UgandanQuestion(
-      id: 'P5_001',
-      text: 'I have ___ my homework.',
-      options: ['do', 'did', 'done', 'doing'],
-      correctAnswerIndex: 2,
-      explanation: 'Present perfect tense: have/has + past participle. "Done" is past participle of "do".',
-      level: PrimaryLevel.p5,
-      category: QuestionCategory.grammar,
-      tags: ['present_perfect', 'irregular_verbs'],
-      curriculumReference: 'P5 English: Present Perfect Tense',
-    ),
-    UgandanQuestion(
-      id: 'P5_002',
-      text: 'Choose the synonym for "happy":',
-      options: ['sad', 'joyful', 'angry', 'tired'],
-      correctAnswerIndex: 1,
-      explanation: 'Synonyms are words with similar meanings. "Joyful" means very happy.',
-      level: PrimaryLevel.p5,
-      category: QuestionCategory.vocabulary,
-      tags: ['synonyms', 'adjectives'],
-      curriculumReference: 'P5 English: Synonyms and Antonyms',
-    ),
-    UgandanQuestion(
-      id: 'P5_003',
-      text: 'What is the past tense of "write"?',
-      options: ['writed', 'wrote', 'written', 'writing'],
-      correctAnswerIndex: 1,
-      explanation: 'Write → wrote → written (present → past → past participle).',
-      level: PrimaryLevel.p5,
-      category: QuestionCategory.grammar,
-      tags: ['past_tense', 'irregular_verbs'],
-      curriculumReference: 'P5 English: Irregular Verbs',
-    ),
-    UgandanQuestion(
-      id: 'P5_004',
-      text: 'Which sentence is in future tense?',
-      options: [
-        'I eat breakfast.',
-        'I ate breakfast.',
-        'I will eat breakfast.',
-        'I am eating breakfast.'
-      ],
-      correctAnswerIndex: 2,
-      explanation: '"Will eat" shows future action.',
-      level: PrimaryLevel.p5,
-      category: QuestionCategory.grammar,
-      tags: ['future_tense', 'will'],
-      curriculumReference: 'P5 English: Future Tense',
-    ),
-    UgandanQuestion(
-      id: 'P5_005',
-      text: 'Read: "The sun rises in the east." This sentence is:',
-      options: ['an opinion', 'a question', 'a fact', 'a command'],
-      correctAnswerIndex: 2,
-      explanation: 'It is a true statement that can be proven, so it is a fact.',
-      level: PrimaryLevel.p5,
-      category: QuestionCategory.reading,
-      tags: ['fact_opinion', 'comprehension'],
-      curriculumReference: 'P5 English: Fact vs Opinion',
-    ),
-    UgandanQuestion(
-      id: 'P5_006',
-      text: 'Which is a complete sentence?',
-      options: [
-        'Running fast.',
-        'The boy runs fast.',
-        'After school.',
-        'Because she was tired.'
-      ],
-      correctAnswerIndex: 1,
-      explanation: 'A complete sentence must have a subject (the boy) and a verb (runs).',
-      level: PrimaryLevel.p5,
-      category: QuestionCategory.writing,
-      tags: ['sentence_structure', 'complete_sentences'],
-      curriculumReference: 'P5 English: Sentence Structure',
-    ),
-    
-    // PRIMARY 6 Questions
-    UgandanQuestion(
-      id: 'P6_001',
-      text: 'If it rains, we ___ cancel the picnic.',
-      options: ['will', 'would', 'should', 'could'],
-      correctAnswerIndex: 0,
-      explanation: 'First conditional: if + present simple, will + base verb.',
-      level: PrimaryLevel.p6,
-      category: QuestionCategory.grammar,
-      tags: ['conditionals', 'first_conditional'],
-      curriculumReference: 'P6 English: Conditionals',
-    ),
-    UgandanQuestion(
-      id: 'P6_002',
-      text: 'What does "benevolent" mean?',
-      options: ['kind', 'angry', 'smart', 'funny'],
-      correctAnswerIndex: 0,
-      explanation: 'Benevolent means kind and helpful.',
-      level: PrimaryLevel.p6,
-      category: QuestionCategory.vocabulary,
-      tags: ['advanced_vocabulary', 'adjectives'],
-      curriculumReference: 'P6 English: Advanced Vocabulary',
-    ),
-    UgandanQuestion(
-      id: 'P6_003',
-      text: 'She is the girl ___ won the competition.',
-      options: ['which', 'who', 'whom', 'whose'],
-      correctAnswerIndex: 1,
-      explanation: 'Use "who" for people as the subject of the relative clause.',
-      level: PrimaryLevel.p6,
-      category: QuestionCategory.grammar,
-      tags: ['relative_clauses', 'relative_pronouns'],
-      curriculumReference: 'P6 English: Relative Clauses',
-    ),
-    UgandanQuestion(
-      id: 'P6_004',
-      text: 'Which is the correct passive voice?',
-      options: [
-        'The teacher praised the student.',
-        'The student praised by the teacher.',
-        'The student was praised by the teacher.',
-        'The student is praising by the teacher.'
-      ],
-      correctAnswerIndex: 2,
-      explanation: 'Passive voice: object + was/were + past participle + by + subject.',
-      level: PrimaryLevel.p6,
-      category: QuestionCategory.grammar,
-      tags: ['passive_voice', 'voice'],
-      curriculumReference: 'P6 English: Active and Passive Voice',
-    ),
-    UgandanQuestion(
-      id: 'P6_005',
-      text: 'Read: "Despite the heavy rain, the football match continued." This means:',
-      options: [
-        'The match stopped because of rain.',
-        'The match went on even though it rained.',
-        'The rain made the match more exciting.',
-        'The match was postponed due to rain.'
-      ],
-      correctAnswerIndex: 1,
-      explanation: '"Despite" means "in spite of". So the match continued even with rain.',
-      level: PrimaryLevel.p6,
-      category: QuestionCategory.reading,
-      tags: ['context_clues', 'comprehension'],
-      curriculumReference: 'P6 English: Reading Comprehension',
-    ),
-    UgandanQuestion(
-      id: 'P6_006',
-      text: 'Which punctuation is correct?',
-      options: [
-        'What time is it.',
-        'What time is it?',
-        'What time is it!',
-        'What time is it,'
-      ],
-      correctAnswerIndex: 1,
-      explanation: 'Questions end with a question mark (?).',
-      level: PrimaryLevel.p6,
-      category: QuestionCategory.writing,
-      tags: ['punctuation', 'question_mark'],
-      curriculumReference: 'P6 English: Punctuation',
-    ),
-    
-    // PRIMARY 7 Questions
-    UgandanQuestion(
-      id: 'P7_001',
-      text: '___ had I arrived than the phone rang.',
-      options: ['No sooner', 'Hardly', 'Scarcely', 'Only'],
-      correctAnswerIndex: 0,
-      explanation: '"No sooner...than" is a fixed structure for showing two quick events.',
-      level: PrimaryLevel.p7,
-      category: QuestionCategory.grammar,
-      tags: ['inversion', 'advanced_structures'],
-      curriculumReference: 'P7 English: Advanced Structures',
-    ),
-    UgandanQuestion(
-      id: 'P7_002',
-      text: 'What is the meaning of "ambiguous"?',
-      options: ['clear', 'confusing', 'simple', 'obvious'],
-      correctAnswerIndex: 1,
-      explanation: 'Ambiguous means having more than one possible meaning; unclear.',
-      level: PrimaryLevel.p7,
-      category: QuestionCategory.vocabulary,
-      tags: ['advanced_vocabulary', 'multiple_meanings'],
-      curriculumReference: 'P7 English: Vocabulary',
-    ),
-    UgandanQuestion(
-      id: 'P7_003',
-      text: 'If I ___ you, I would study harder.',
-      options: ['am', 'was', 'were', 'be'],
-      correctAnswerIndex: 2,
-      explanation: 'Second conditional uses "were" for all subjects in the if-clause.',
-      level: PrimaryLevel.p7,
-      category: QuestionCategory.grammar,
-      tags: ['conditionals', 'second_conditional'],
-      curriculumReference: 'P7 English: Conditionals',
-    ),
-    UgandanQuestion(
-      id: 'P7_004',
-      text: 'The report ___ by the team right now.',
-      options: ['is being prepared', 'is prepared', 'prepares', 'preparing'],
-      correctAnswerIndex: 0,
-      explanation: 'Present continuous passive for actions happening now.',
-      level: PrimaryLevel.p7,
-      category: QuestionCategory.grammar,
-      tags: ['passive_voice', 'present_continuous'],
-      curriculumReference: 'P7 English: Passive Voice',
-    ),
-    UgandanQuestion(
-      id: 'P7_005',
-      text: 'Read: "The protagonist in the story faced numerous challenges but persevered." The main character was:',
-      options: ['weak', 'determined', 'lucky', 'foolish'],
-      correctAnswerIndex: 1,
-      explanation: '"Persevered" means continued despite difficulties, showing determination.',
-      level: PrimaryLevel.p7,
-      category: QuestionCategory.reading,
-      tags: ['character_traits', 'inference'],
-      curriculumReference: 'P7 English: Literary Analysis',
-    ),
-    UgandanQuestion(
-      id: 'P7_006',
-      text: 'Which sentence has correct parallel structure?',
-      options: [
-        'She likes swimming, to run, and reading.',
-        'She likes swimming, running, and to read.',
-        'She likes to swim, run, and read.',
-        'She likes swimming, runs, and reading.'
-      ],
-      correctAnswerIndex: 2,
-      explanation: 'Parallel structure uses the same grammatical form: to swim, (to) run, (to) read.',
-      level: PrimaryLevel.p7,
-      category: QuestionCategory.writing,
-      tags: ['parallel_structure', 'writing_style'],
-      curriculumReference: 'P7 English: Writing Skills',
+      difficulty: Difficulty.hard,
+      tags: ['present perfect'],
+      curriculumReference: 'P5 English - Tenses',
     ),
   ];
-  
-  static Map<PrimaryLevel, List<UgandanQuestion>> getQuestionsByLevel() {
-    final map = <PrimaryLevel, List<UgandanQuestion>>{};
-    for (final level in PrimaryLevel.values) {
-      map[level] = allQuestions.where((q) => q.level == level).toList();
-    }
-    return map;
-  }
-  
-  static List<UgandanQuestion> getQuestionsForSession(int sessionNumber, PrimaryLevel? currentLevel) {
-    final allQuestionsByLevel = getQuestionsByLevel();
-    final selectedQuestions = <UgandanQuestion>[];
-    
-    if (sessionNumber == 1) {
-      // Placement test: 2 questions from each level
-      for (final level in PrimaryLevel.values) {
-        final levelQuestions = allQuestionsByLevel[level] ?? [];
-        if (levelQuestions.isNotEmpty) {
-          final shuffled = List.of(levelQuestions)..shuffle();
-          selectedQuestions.addAll(shuffled.take(2));
-        }
-      }
-    } else if (currentLevel != null) {
-      // Adaptive test based on current level
-      final centerIndex = currentLevel.index;
-      final levels = [
-        currentLevel,
-        if (centerIndex > 0) PrimaryLevel.values[centerIndex - 1],
-        if (centerIndex < PrimaryLevel.values.length - 1) PrimaryLevel.values[centerIndex + 1],
-      ].whereType<PrimaryLevel>().toList();
-      
-      final questionsPerLevel = (10 / levels.length).ceil();
-      
-      for (final level in levels) {
-        final levelQuestions = allQuestionsByLevel[level] ?? [];
-        if (levelQuestions.isNotEmpty) {
-          final shuffled = List.of(levelQuestions)..shuffle();
-          selectedQuestions.addAll(shuffled.take(questionsPerLevel));
-        }
-      }
-    }
-    
-    // Ensure we have exactly 10 questions
-    selectedQuestions.shuffle();
-    return selectedQuestions.length > 10 ? selectedQuestions.sublist(0, 10) : selectedQuestions;
+
+  static List<P5Question> getQuestionsByDifficulty(Difficulty difficulty) {
+    return allQuestions
+        .where((q) => q.difficulty == difficulty)
+        .toList();
   }
 }
 
-class PrimaryAdaptiveTestEngine {
-  final List<UgandanQuestion> testQuestions;
-  int currentQuestionIndex = 0;
-  int score = 0;
-  bool testCompleted = false;
-  final List<QuestionResponse> responses = [];
-  DateTime? testStartTime;
-  DateTime? questionStartTime;
-  
-  int currentLevelIndex = 2; // Start at P5
-  int correctInRow = 0;
-  int wrongInRow = 0;
-  final int sessionNumber;
-  
-  PrimaryAdaptiveTestEngine(this.testQuestions, {required this.sessionNumber}) {
-    testStartTime = DateTime.now();
-    questionStartTime = DateTime.now();
-  }
-  
-  UgandanQuestion getCurrentQuestion() {
-    return testQuestions[currentQuestionIndex];
-  }
-  
-  void submitAnswer(int selectedIndex) {
-    final question = getCurrentQuestion();
-    final isCorrect = selectedIndex == question.correctAnswerIndex;
-    final timeTaken = DateTime.now().difference(questionStartTime!);
-    
-    responses.add(QuestionResponse(
-      question: question,
-      selectedAnswerIndex: selectedIndex,
-      isCorrect: isCorrect,
-      timeTaken: timeTaken,
-    ));
-    
+
+
+// -------------------------------
+// ADAPTIVE ENGINE
+// -------------------------------
+
+class AdaptiveEngine {
+  Difficulty currentDifficulty = Difficulty.medium;
+
+  int correctStreak = 0;
+  int wrongStreak = 0;
+
+  void registerAnswer(bool isCorrect) {
     if (isCorrect) {
-      score++;
-      correctInRow++;
-      wrongInRow = 0;
-      
-      if (correctInRow >= 2 && currentLevelIndex < PrimaryLevel.values.length - 1) {
-        currentLevelIndex++;
-        correctInRow = 0;
-      }
+      correctStreak++;
+      wrongStreak = 0;
     } else {
-      wrongInRow++;
-      correctInRow = 0;
-      
-      if (wrongInRow >= 2 && currentLevelIndex > 0) {
-        currentLevelIndex--;
-        wrongInRow = 0;
-      }
+      wrongStreak++;
+      correctStreak = 0;
     }
-    
-    if (currentQuestionIndex < testQuestions.length - 1) {
-      currentQuestionIndex++;
-      questionStartTime = DateTime.now();
-    } else {
-      testCompleted = true;
+
+    _adjustDifficulty();
+  }
+
+  void _adjustDifficulty() {
+    if (correctStreak >= 2) {
+      _increaseDifficulty();
+      correctStreak = 0;
+    }
+
+    if (wrongStreak >= 2) {
+      _decreaseDifficulty();
+      wrongStreak = 0;
     }
   }
-  
-  PrimaryLevel getEstimatedLevel() {
-    return PrimaryLevel.values[currentLevelIndex];
-  }
-  
-  Map<PrimaryLevel, double> getLevelPerformance() {
-    final Map<PrimaryLevel, List<bool>> levelResults = {};
-    
-    for (final response in responses) {
-      final question = response.question;
-      final level = question.level;
-      levelResults.putIfAbsent(level, () => []).add(response.isCorrect);
+
+  void _increaseDifficulty() {
+    if (currentDifficulty == Difficulty.easy) {
+      currentDifficulty = Difficulty.medium;
+    } else if (currentDifficulty == Difficulty.medium) {
+      currentDifficulty = Difficulty.hard;
     }
-    
-    final Map<PrimaryLevel, double> performance = {};
-    for (final entry in levelResults.entries) {
-      final correctCount = entry.value.where((correct) => correct).length;
-      performance[entry.key] = entry.value.isEmpty ? 0.0 : correctCount / entry.value.length;
-    }
-    
-    return performance;
   }
-  
-  TestResult getResults() {
-    final totalTime = DateTime.now().difference(testStartTime!);
-    
-    return TestResult(
-      testId: 'session_${sessionNumber}_${DateTime.now().millisecondsSinceEpoch}',
-      completedAt: DateTime.now(),
-      estimatedLevel: getEstimatedLevel(),
-      questionsAnswered: responses.length,
-      correctAnswers: score,
-      totalTime: totalTime,
-      responses: responses,
-      sessionNumber: sessionNumber,
-    );
+
+  void _decreaseDifficulty() {
+    if (currentDifficulty == Difficulty.hard) {
+      currentDifficulty = Difficulty.medium;
+    } else if (currentDifficulty == Difficulty.medium) {
+      currentDifficulty = Difficulty.easy;
+    }
   }
 }
 
-class StorageService {
-  static Future<Map<String, dynamic>> getStatistics() async {
-    final prefs = await SharedPreferences.getInstance();
-    final totalQuestions = prefs.getInt('total_questions') ?? 0;
-    final correctAnswers = prefs.getInt('correct_answers') ?? 0;
-    final overallAccuracy = totalQuestions > 0 ? correctAnswers / totalQuestions : 0.0;
-    
-    return {
-      'totalTests': prefs.getInt('total_tests') ?? 0,
-      'averageAccuracy': prefs.getDouble('average_accuracy') ?? 0.0,
-      'bestLevel': prefs.getString('best_level') ?? 'P3',
-      'totalQuestions': totalQuestions,
-      'correctAnswers': correctAnswers,
-      'overallAccuracy': overallAccuracy,
-    };
+
+
+// -------------------------------
+// SESSION MANAGER
+// -------------------------------
+
+class P5SessionManager {
+  final AdaptiveEngine adaptiveEngine = AdaptiveEngine();
+
+  int totalQuestions = 0;
+  int correctAnswers = 0;
+
+  P5Question? currentQuestion;
+
+  void startSession() {
+    totalQuestions = 0;
+    correctAnswers = 0;
   }
-  
-  static Future<List<TestResult>> getTestResults() async {
-    // Simplified implementation - in real app, store serialized results
-    return [];
+
+  P5Question getNextQuestion() {
+    final questions =
+        P5QuestionService.getQuestionsByDifficulty(
+            adaptiveEngine.currentDifficulty);
+
+    questions.shuffle();
+
+    currentQuestion = questions.first;
+    return currentQuestion!;
   }
-  
-  static Future<void> clearAllData() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+
+  void submitAnswer(int selectedIndex) {
+    if (currentQuestion == null) return;
+
+    bool isCorrect =
+        selectedIndex == currentQuestion!.correctAnswerIndex;
+
+    if (isCorrect) correctAnswers++;
+
+    totalQuestions++;
+
+    adaptiveEngine.registerAnswer(isCorrect);
   }
-  
-  static Future<void> saveTestResult(TestResult result) async {
-    final prefs = await SharedPreferences.getInstance();
-    
-    // Update statistics
-    final oldTotalTests = prefs.getInt('total_tests') ?? 0;
-    final oldTotalQuestions = prefs.getInt('total_questions') ?? 0;
-    final oldCorrectAnswers = prefs.getInt('correct_answers') ?? 0;
-    
-    await prefs.setInt('total_tests', oldTotalTests + 1);
-    await prefs.setInt('total_questions', oldTotalQuestions + result.questionsAnswered);
-    await prefs.setInt('correct_answers', oldCorrectAnswers + result.correctAnswers);
-    
-    final newOverallAccuracy = (oldCorrectAnswers + result.correctAnswers) / 
-        (oldTotalQuestions + result.questionsAnswered);
-    await prefs.setDouble('overall_accuracy', newOverallAccuracy);
-    
-    // Save current level
-    await SessionManager.setUserLevel(result.estimatedLevel);
-    
-    // Update best level if current is higher
-    final bestLevelStr = prefs.getString('best_level') ?? 'P3';
-    final bestLevelIndex = _getLevelIndexFromString(bestLevelStr);
-    if (result.estimatedLevel.index > bestLevelIndex) {
-      await prefs.setString('best_level', AppExtensions.getLevelShortName(result.estimatedLevel));
-    }
-    
-    // Update session
-    if (result.sessionNumber < 3) {
-      await SessionManager.setCurrentSession(result.sessionNumber + 1);
-    } else {
-      await SessionManager.markSampleComplete();
-    }
-  }
-  
-  static int _getLevelIndexFromString(String levelStr) {
-    switch (levelStr) {
-      case 'P3': return 0;
-      case 'P4': return 1;
-      case 'P5': return 2;
-      case 'P6': return 3;
-      case 'P7': return 4;
-      default: return 0;
-    }
+
+  double get accuracy {
+    if (totalQuestions == 0) return 0;
+    return correctAnswers / totalQuestions;
   }
 }
 
@@ -2379,3 +1932,4 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Colors.red;
   }
 }
+
